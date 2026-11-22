@@ -186,53 +186,86 @@ final class Printer {
         long t = times.isEmpty() ? System.currentTimeMillis() : times.get(0);
         txt(b, new SimpleDateFormat("dd.MM.yyyy  HH:mm", Locale.GERMAN).format(new Date(t)) + " Uhr\n");
         b.write(new byte[]{0x1B, 0x61, 0x00});
-        txt(b, thin + "\n");
+        txt(b, repeat('=', 48) + "\n");
+
+        String dbl = repeat('=', 48);
 
         // Artikel
+        b.write(new byte[]{0x1B, 0x45, 0x01});
+        txt(b, "ARTIKEL\n");
+        b.write(new byte[]{0x1B, 0x45, 0x00});
+        txt(b, "\n");
         b.write(new byte[]{0x1D, 0x21, sz});
         if (r.items.isEmpty()) txt(b, "(keine Artikel erkannt,\n siehe Original unten)\n");
-        for (Parser.Item it : r.items) {
+        for (int i = 0; i < r.items.size(); i++) {
+            Parser.Item it = r.items.get(i);
             b.write(new byte[]{0x1B, 0x45, 0x01});
             txt(b, it.qty + "x " + it.name + "\n");
             b.write(new byte[]{0x1B, 0x45, 0x00});
-            for (String n : it.notes) txt(b, "   " + n + "\n");
-        }
-        if (!r.hints.isEmpty()) {
-            txt(b, "\n");
-            for (String h : r.hints) txt(b, "Info: " + h + "\n");
+            for (String n : it.notes) txt(b, "   - " + n + "\n");
+            if (i < r.items.size() - 1) txt(b, "\n");          // Leerzeile zwischen Artikeln
         }
         b.write(new byte[]{0x1D, 0x21, 0x00});
-        txt(b, "\n" + line.substring(0, Math.min(line.length(), 48)) + "\n");
 
-        // Telefon, Adresse, Kunde
+        if (!r.hints.isEmpty()) {
+            txt(b, "\n" + thin + "\n");
+            b.write(new byte[]{0x1B, 0x45, 0x01});
+            txt(b, "INFO\n");
+            b.write(new byte[]{0x1B, 0x45, 0x00});
+            b.write(new byte[]{0x1D, 0x21, sz});
+            for (String h : r.hints) txt(b, h + "\n");
+            b.write(new byte[]{0x1D, 0x21, 0x00});
+        }
+        txt(b, dbl + "\n");
+
+        // Kunde, Telefon, Adresse jeweils mit Überschrift und Wert darunter
         LinkedHashSet<String> phones = new LinkedHashSet<>();
         String chatPhone = Phone.ifNumber(chat);
         if (chatPhone != null) phones.add(chatPhone);
         for (String m : msgs) phones.addAll(Phone.findAll(m));
 
-        b.write(new byte[]{0x1D, 0x21, sz, 0x1B, 0x45, 0x01});
-        if (chatPhone == null) txt(b, "KUNDE: " + chat + "\n");
-        if (phones.isEmpty()) txt(b, "TEL: -\n");
-        for (String p : phones) txt(b, "TEL: " + p + "\n");
-        if (!"ABHOLUNG".equals(r.type)) {
-            txt(b, "ADRESSE: " + (r.address != null ? r.address : "-") + "\n");
+        if (chatPhone == null) {
+            section(b, "KUNDE", sz);
+            value(b, chat, sz);
+            txt(b, "\n");
         }
-        b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
-        if (knownAddress) txt(b, "(letzte bekannte Adresse, bitte pruefen)\n");
-        txt(b, thin + "\n");
+        section(b, "TELEFON", sz);
+        if (phones.isEmpty()) value(b, "-", sz);
+        for (String p : phones) value(b, p, sz);
+
+        if (!"ABHOLUNG".equals(r.type)) {
+            txt(b, "\n");
+            section(b, "ADRESSE", sz);
+            if (r.address == null) value(b, "-", sz);
+            else for (String part : r.address.split(",\\s*")) value(b, part, sz);
+            if (knownAddress) txt(b, "(letzte bekannte Adresse, bitte pruefen)\n");
+        }
+        txt(b, dbl + "\n");
 
         // Original klein zur Kontrolle
         b.write(new byte[]{0x1B, 0x4D, 0x01});        // kleine Schrift
         txt(b, "Original:\n");
         SimpleDateFormat hm = new SimpleDateFormat("HH:mm", Locale.GERMAN);
         for (int i = 0; i < msgs.size(); i++) {
-            txt(b, hm.format(new Date(times.get(i))) + "  " + msgs.get(i).replace("\r", "").trim() + "\n");
+            txt(b, hm.format(new Date(times.get(i))) + "  " + msgs.get(i).replace("\r", "").trim() + "\n\n");
         }
         b.write(new byte[]{0x1B, 0x4D, 0x00});
 
         b.write(new byte[]{0x1B, 0x64, 0x04});        // Vorschub
         b.write(new byte[]{0x1D, 0x56, 0x42, 0x00});  // Schnitt
         return b.toByteArray();
+    }
+
+    private static void section(ByteArrayOutputStream b, String title, byte sz) throws IOException {
+        b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x01});
+        txt(b, title + "\n");
+        b.write(new byte[]{0x1B, 0x45, 0x00});
+    }
+
+    private static void value(ByteArrayOutputStream b, String v, byte sz) throws IOException {
+        b.write(new byte[]{0x1D, 0x21, sz, 0x1B, 0x45, 0x01});
+        txt(b, v.trim() + "\n");
+        b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
     }
 
     private static String repeat(char c, int n) {

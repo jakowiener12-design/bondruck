@@ -10,8 +10,23 @@ android {
         applicationId 'at.cardano.bondruck'
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName '1.0'
+        versionCode((System.getenv('GITHUB_RUN_NUMBER') ?: '1') as Integer)
+        versionName "1." + (System.getenv('GITHUB_RUN_NUMBER') ?: '0')
+    }
+
+    signingConfigs {
+        fixed {
+            storeFile file('bondruck.jks')
+            storePassword 'bondruck'
+            keyAlias 'bondruck'
+            keyPassword 'bondruck'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.fixed
+        }
     }
 
     compileOptions {
