@@ -42,6 +42,7 @@ final class Parser {
         final List<String> hints = new ArrayList<>();
         String address;
         String type; // LIEFERUNG oder ABHOLUNG
+        final List<String> knownPhones = new ArrayList<>();   // aus Kontakten / früheren Bestellungen
     }
 
     /** Android (ICU) hat Unicode-\\b/\\w von Haus aus und kennt UNICODE_CHARACTER_CLASS nicht. */

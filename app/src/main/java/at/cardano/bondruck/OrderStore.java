@@ -28,6 +28,7 @@ final class OrderStore {
 
     private static final Map<String, Order> orders = new HashMap<>();
     private static final Map<String, String> addresses = new HashMap<>();
+    private static final Map<String, String> phones = new HashMap<>();
     private static boolean loaded;
     private static final List<String> log = new ArrayList<>();
 
@@ -101,6 +102,18 @@ final class OrderStore {
         save(c);
     }
 
+    static synchronized void rememberPhone(Context c, String chat, String phone) {
+        load(c);
+        if (phone == null || phone.equals(phones.get(chat))) return;
+        phones.put(chat, phone);
+        save(c);
+    }
+
+    static synchronized String knownPhone(Context c, String chat) {
+        load(c);
+        return phones.get(chat);
+    }
+
     static synchronized String knownAddress(Context c, String chat) {
         load(c);
         return addresses.get(chat);
@@ -130,6 +143,11 @@ final class OrderStore {
                 for (int k = 0; k < m.length(); k++) { o.msgs.add(m.getString(k)); o.times.add(t.getLong(k)); }
                 if (now - o.last < ORDER_GAP_MS * 4) orders.put(o.chat, o);
             }
+            JSONObject ph = root.optJSONObject("phones");
+            if (ph != null) {
+                Iterator<String> keys = ph.keys();
+                while (keys.hasNext()) { String k = keys.next(); phones.put(k, ph.getString(k)); }
+            }
             JSONObject a = root.optJSONObject("addresses");
             if (a != null) {
                 Iterator<String> keys = a.keys();
@@ -155,6 +173,7 @@ final class OrderStore {
             }
             root.put("orders", arr);
             root.put("addresses", new JSONObject(addresses));
+            root.put("phones", new JSONObject(phones));
             sp(c).edit().putString("data", root.toString()).apply();
         } catch (Exception ignored) { }
     }

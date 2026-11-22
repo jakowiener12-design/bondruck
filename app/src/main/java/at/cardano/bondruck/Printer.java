@@ -27,6 +27,34 @@ final class Printer {
 
     private Printer() {}
 
+    /** Telefonnummer (Kontakte, frühere Bestellungen) und frühere Adresse ergänzen. Liefert true, wenn Adresse von früher. */
+    static boolean enrich(Context app, String chat, List<String> msgs, Parser.Result r) {
+        // Telefonnummer
+        if (Phone.ifNumber(chat) == null) {
+            String fromMsg = null;
+            for (String m : msgs) { List<String> f = Phone.findAll(m); if (!f.isEmpty()) { fromMsg = f.get(0); break; } }
+            if (fromMsg != null) OrderStore.rememberPhone(app, chat, fromMsg);
+            else {
+                String p = Contacts.phoneOf(app, chat);
+                if (p == null) p = OrderStore.knownPhone(app, chat);
+                else OrderStore.rememberPhone(app, chat, p);
+                if (p != null) r.knownPhones.add(p);
+            }
+        }
+        // Adresse
+        if (r.address != null) {
+            OrderStore.rememberAddress(app, chat, r.address);
+            Prefs.learnStreet(app, r.address);
+            return false;
+        }
+        if (!"ABHOLUNG".equals(r.type)) {
+            r.address = OrderStore.knownAddress(app, chat);
+            if (r.address != null && r.type == null) r.type = "LIEFERUNG";
+            return r.address != null;
+        }
+        return false;
+    }
+
     /** Druckt die gesammelte Bestellung eines Chats. */
     static void printOrder(Context ctx, String chat, boolean manual) {
         final Context app = ctx.getApplicationContext();
@@ -40,12 +68,7 @@ final class Printer {
                 times = new ArrayList<>(o.times);
             }
             Parser.Result r = Parser.parse(msgs, Parser.replacements(Prefs.repl(app)));
-            boolean known = false;
-            if (r.address != null) { OrderStore.rememberAddress(app, chat, r.address); Prefs.learnStreet(app, r.address); }
-            else if (!"ABHOLUNG".equals(r.type)) {
-                r.address = OrderStore.knownAddress(app, chat);
-                known = r.address != null;
-            }
+            boolean known = enrich(app, chat, msgs, r);
             boolean reprint = o.printedAt > 0;
             pfand = Prefs.pfandCents(app);
             try {
@@ -272,12 +295,7 @@ final class Printer {
                 chat = ph.isEmpty() ? "Manuelle Bestellung" : ph.get(0);
             }
             Parser.Result r = Parser.parse(msgs, Parser.replacements(Prefs.repl(app)));
-            boolean known = false;
-            if (r.address != null) { OrderStore.rememberAddress(app, chat, r.address); Prefs.learnStreet(app, r.address); }
-            else if (!"ABHOLUNG".equals(r.type)) {
-                r.address = OrderStore.knownAddress(app, chat);
-                known = r.address != null;
-            }
+            boolean known = enrich(app, chat, msgs, r);
             pfand = Prefs.pfandCents(app);
             try {
                 send(Prefs.ip(app), Prefs.port(app),
@@ -461,6 +479,7 @@ final class Printer {
         String chatPhone = Phone.ifNumber(chat);
         if (chatPhone != null) phones.add(chatPhone);
         for (String m : msgs) phones.addAll(Phone.findAll(m));
+        phones.addAll(r.knownPhones);
 
         if (chatPhone == null) {
             section(b, "KUNDE", sz);

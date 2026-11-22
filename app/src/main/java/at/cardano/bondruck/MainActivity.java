@@ -110,10 +110,13 @@ public class MainActivity extends Activity {
         showTab(shared ? 1 : 0);
         takeShared(getIntent());
 
+        List<String> perms = new ArrayList<>();
         if (Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
-        }
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
+            perms.add(Manifest.permission.POST_NOTIFICATIONS);
+        if (checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED)
+            perms.add(Manifest.permission.READ_CONTACTS);
+        if (!perms.isEmpty()) requestPermissions(perms.toArray(new String[0]), 1);
     }
 
     // ---------- Seiten ----------
@@ -254,6 +257,8 @@ public class MainActivity extends Activity {
 
         LinearLayout perm = card(p, "Berechtigungen");
         hint(perm, "Einmalig nötig, damit WhatsApp mitgelesen wird und die App im Hintergrund läuft.");
+        button(perm, "Kontakte erlauben (Telefonnummer gespeicherter Kunden)", false, () ->
+                requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, 2));
         button(perm, "Benachrichtigungszugriff erlauben", false, () ->
                 startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
         button(perm, "Akku Optimierung ausschalten", false, () ->
@@ -383,7 +388,13 @@ public class MainActivity extends Activity {
             }
             if (r.items.isEmpty()) sb.append("(keine Artikel erkannt)\n");
             else sb.append("Summe: € ").append(Prices.fmt(Prices.total(pm, r.items, Prefs.pfandCents(this))[0])).append('\n');
-            sb.append(r.address != null ? "Adresse: " + r.address : "Adresse: -");
+            List<String> showMsgs = new ArrayList<>(o.msgs);
+            boolean old = Printer.enrich(this, o.chat, showMsgs, r);
+            String tel = Phone.ifNumber(o.chat);
+            if (tel == null && !r.knownPhones.isEmpty()) tel = r.knownPhones.get(0);
+            if (tel == null) for (String m : o.msgs) { List<String> f = Phone.findAll(m); if (!f.isEmpty()) { tel = f.get(0); break; } }
+            sb.append("Telefon: ").append(tel != null ? tel : "-").append('\n');
+            sb.append(r.address != null ? "Adresse: " + r.address + (old ? " (frühere Adresse)" : "") : "Adresse: -");
             sb.append(o.printedAt > 0 ? "\nGedruckt " + hm.format(new Date(o.printedAt)) : "\nNoch nicht gedruckt");
             TextView d = new TextView(this);
             d.setText(sb.toString());
