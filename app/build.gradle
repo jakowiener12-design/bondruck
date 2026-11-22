@@ -34,3 +34,8 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
+
+dependencies {
+    // Texterkennung auf dem Gerät (ohne Internet), lateinische Schrift inkl. Umlaute
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+}

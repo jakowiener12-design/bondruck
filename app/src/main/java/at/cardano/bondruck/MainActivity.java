@@ -157,7 +157,14 @@ public class MainActivity extends Activity {
         free.setTextSize(18);
         free.setGravity(Gravity.TOP);
         free.setHint("Text eingeben oder aus einer anderen App über Teilen > Bondruck schicken");
-        button(c, "Zwischenablage als Bestellung drucken", true, () -> {
+        LinearLayout ph = row(c);
+        button(ph, "Letztes WhatsApp Foto lesen", true, this::readLatestPhoto);
+        button(ph, "Foto auswählen", false, () -> {
+            Intent i = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            i.setType("image/*");
+            startActivityForResult(i, 4);
+        });
+        button(c, "Zwischenablage als Bestellung drucken", false, () -> {
             android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
             CharSequence t = null;
             if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0)
@@ -527,7 +534,87 @@ public class MainActivity extends Activity {
         save();
     }
 
+    // ---------- Foto lesen (Texterkennung) ----------
+
+    private void readLatestPhoto() {
+        String perm = Build.VERSION.SDK_INT >= 33 ? Manifest.permission.READ_MEDIA_IMAGES
+                : Manifest.permission.READ_EXTERNAL_STORAGE;
+        if (checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{perm}, 3);
+            return;
+        }
+        android.net.Uri u = latestImage(true);
+        if (u == null) u = latestImage(false);
+        if (u == null) { toast("Kein Foto gefunden. Foto in WhatsApp einmal öffnen, damit es geladen wird."); return; }
+        ocr(u);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] perms, int[] res) {
+        super.onRequestPermissionsResult(code, perms, res);
+        if (code == 3) {
+            if (res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED) readLatestPhoto();
+            else toast("Ohne Zugriff auf Fotos geht es nur über \"Foto auswählen\"");
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int code, int result, Intent data) {
+        super.onActivityResult(code, result, data);
+        if (code == 4 && result == RESULT_OK && data != null && data.getData() != null) ocr(data.getData());
+    }
+
+    /** Neuestes Bild: zuerst empfangene WhatsApp Fotos, sonst irgendein Foto. */
+    private android.net.Uri latestImage(boolean whatsappOnly) {
+        android.net.Uri coll = android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        String sel = null;
+        String[] args = null;
+        if (whatsappOnly) {
+            String col = Build.VERSION.SDK_INT >= 29 ? android.provider.MediaStore.MediaColumns.RELATIVE_PATH
+                    : android.provider.MediaStore.MediaColumns.DATA;
+            sel = col + " LIKE ? AND " + col + " NOT LIKE ?";
+            args = new String[]{"%WhatsApp%Images%", "%Sent%"};
+        }
+        try (android.database.Cursor cur = getContentResolver().query(coll,
+                new String[]{android.provider.MediaStore.Images.Media._ID}, sel, args,
+                android.provider.MediaStore.Images.Media.DATE_ADDED + " DESC")) {
+            if (cur != null && cur.moveToFirst()) return android.content.ContentUris.withAppendedId(coll, cur.getLong(0));
+        } catch (Exception e) {
+            toast("Fotos nicht lesbar: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /** Text aus dem Foto lesen und ins Textfeld schreiben. */
+    private void ocr(android.net.Uri u) {
+        toast("Lese Text aus Foto…");
+        try {
+            com.google.mlkit.vision.common.InputImage img = com.google.mlkit.vision.common.InputImage.fromFilePath(this, u);
+            com.google.mlkit.vision.text.TextRecognition
+                    .getClient(com.google.mlkit.vision.text.latin.TextRecognizerOptions.DEFAULT_OPTIONS)
+                    .process(img)
+                    .addOnSuccessListener(t -> {
+                        String txt = t.getText();
+                        if (txt == null || txt.trim().isEmpty()) { toast("Kein Text im Foto erkannt"); return; }
+                        showTab(1);
+                        free.setText(txt.trim());
+                        free.setSelection(free.getText().length());
+                        OrderStore.log("Foto gelesen: " + (txt.length() > 40 ? txt.substring(0, 40).replace('\n', ' ') + "…" : txt));
+                        toast("Text erkannt. Prüfen und \"Als Bestellung drucken\" tippen.");
+                    })
+                    .addOnFailureListener(e -> toast("Texterkennung fehlgeschlagen: " + e.getMessage()));
+        } catch (Exception e) {
+            toast("Foto nicht lesbar: " + e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("deprecation")
     private void takeShared(Intent i) {
+        if (i != null && Intent.ACTION_SEND.equals(i.getAction()) && i.getType() != null && i.getType().startsWith("image/")) {
+            android.net.Uri u = i.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (u != null) ocr(u);
+            return;
+        }
         if (i == null || !Intent.ACTION_SEND.equals(i.getAction())) return;
         CharSequence t = i.getCharSequenceExtra(Intent.EXTRA_TEXT);
         if (t == null) return;
