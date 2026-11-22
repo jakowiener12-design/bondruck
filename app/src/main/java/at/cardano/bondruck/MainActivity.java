@@ -438,6 +438,28 @@ public class MainActivity extends Activity {
         return sv;
     }
 
+    // ---------- Titelleiste ----------
+
+    @Override
+    public boolean onCreateOptionsMenu(android.view.Menu menu) {
+        android.view.MenuItem it = menu.add(0, 1, 0, "Aktualisieren");
+        it.setIcon(android.R.drawable.ic_popup_sync);
+        it.setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS | android.view.MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(android.view.MenuItem item) {
+        if (item.getItemId() == 1) {
+            showTab(0);
+            refreshOrders();
+            onResume();
+            toast("Aktualisiert");
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
     // ---------- Lebenszyklus ----------
 
     @Override
