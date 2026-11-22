@@ -105,10 +105,10 @@ Mix-Sandwich | 8,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mi
 Mix-Dürüm | 9,00 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
 Mix-Bowl | 9,00 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
 Mix-Teller-Bowl | 18,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
-Pide mit Schafskäse, Gouda, Mozzarella | 12,90 | Schafskäse, Gouda, Mozzarella
-Pide mit Wurst (Sucuk) | 13,90 | Sucuk (Wurst)
+Pide mit Käse | 12,90 | Schafskäse, Gouda, Mozzarella
+Pide mit Sucuk | 13,90 | Sucuk (Wurst)
 Pide mit Spinat | 13,90 | Spinat
-Pide mit Faschiertem Rindfleisch | 14,90 | Faschiertes Rindfleisch
+Pide mit faschiertem Rindfleisch | 14,90 | Faschiertes Rindfleisch
 Pide mit Rinddöner | 14,90 | Rinddöner
 Baguette-Pide mit Käse | 12,90 | Schafskäse, Gouda, Mozzarella
 Baguette-Pide mit Spinat | 13,90 | Spinat, Weichkäse
@@ -147,14 +147,14 @@ Mayonnaise | 0,80
 Sriracha-Sauce | 0,80
 Scharfe Sauce | 0,80
 Tabasco Sauce | 0,80
-Gemischter Salat Klein (500 Ml) | 7,50 | Eisbergsalat, Schafskäse, rote Zwiebel, Tomaten, Gurken, Mais
-Gemischter Salat Groß (1000 Ml) | 9,50 | Eisbergsalat, Schafskäse, rote Zwiebel, Tomaten, Gurken, Mais
+Gemischter Salat klein | 7,50 | Eisbergsalat, Schafskäse, rote Zwiebel, Tomaten, Gurken, Mais
+Gemischter Salat groß | 9,50 | Eisbergsalat, Schafskäse, rote Zwiebel, Tomaten, Gurken, Mais
 Tomatensalat | 5,50 | Eisbergsalat, Tomaten, rote Zwiebeln, Oliven
 Thunfischsalat | 8,50 | Thunfisch, Eisbergsalat, rote Zwiebeln, Oliven, Mais
 Reis | 4,50 | Hausgemachter Reis
 Pommes | 4,50 | Gewürzte Pommes
-Hausgemachtes Lavash Brot | 1,00 | Hausgemachtes Brot
-Hausgemachtes Sandwich Brot | 1,00 | Hausgemachtes Brot
+Lavash Brot | 1,00 | Hausgemachtes Brot
+Sandwich Brot | 1,00 | Hausgemachtes Brot
 Pizza Stangerl 5 Stk. | 4,50
 Chicken Nuggets 8 Stk. | 8,50 | Chicken Nuggets mit Pommes frites
 Chicken Nuggets 12 Stk. | 12,90 | Chicken Nuggets mit Pommes frites
@@ -185,8 +185,8 @@ Almdudler 0,5l | 3,25
 Powerade Mountain Blast 0,5l | 3,75
 Fuze Tea Zitrone 0,5l | 3,25
 Stillwasser 0,5l | 2,50
-Römerquelle Still 0,5l | 2,75
-Römerquelle Prickelnd 0,5l | 2,75
+Römerquelle still 0,5l | 2,75
+Römerquelle prickelnd 0,5l | 2,75
 Bravo Multivitamin 0,33l | 2,75
 Bravo Multivitamin 0,5l | 3,25
 Uludag Gazoz 0,33l | 2,50

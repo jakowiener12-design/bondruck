@@ -18,6 +18,23 @@ final class Parser {
         String qty;
         String name;
         final List<String> notes = new ArrayList<>();
+        final List<String> extras = new ArrayList<>();   // kostenpflichtige Beilagen je Stück
+    }
+
+    private static final Pattern EXTRA = Pattern.compile("^(extra|dazu|plus|zusätzlich|\\+)\\s*(.+)$", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+    /** Gleiche Artikel (Name, Hinweise, Beilagen) zusammenfassen. */
+    static void merge(Result r) {
+        Map<String, Item> m = new LinkedHashMap<>();
+        for (Item it : r.items) {
+            String key = (it.name + "|" + it.notes + "|" + it.extras).toLowerCase(Locale.GERMAN);
+            Item have = m.get(key);
+            if (have == null) { m.put(key, it); continue; }
+            try { have.qty = String.valueOf(Integer.parseInt(have.qty) + Integer.parseInt(it.qty)); }
+            catch (NumberFormatException e) { m.put(key + m.size(), it); }
+        }
+        r.items.clear();
+        r.items.addAll(m.values());
     }
 
     static final class Result {
@@ -45,13 +62,13 @@ final class Parser {
             "ist", "meine", "unsere", "wohne", "wohnen", "lieferadresse", "addresse", "hallo"));
 
     private static final String NUMWORDS =
-            "ein|eine|einen|einmal|zwei|zweimal|drei|dreimal|vier|fünf|sechs|sieben|acht|neun|zehn";
+            "ein|eine|einen|einer|eins|eines|einmal|zwei|zweimal|drei|dreimal|vier|fünf|sechs|sieben|acht|neun|zehn";
     private static final Pattern QTY = Pattern.compile(
-            "(?:(?<![\\d.,/\\w])(\\d{1,2})\\s*(?:x|×|stk\\.?|stück|mal)?\\s*|\\b(" + NUMWORDS + ")\\s+)"
+            "(?:(?<![\\d.,/\\w])(\\d{1,2})\\s*(?:(?:x|×)(?![a-zäöüß])|stk\\.?|stück|mal)?\\s*|\\b(" + NUMWORDS + ")\\s+)"
                     + "(?=[a-zäöüß])(?!(?:uhr|euro|eur|min|minuten|personen|leute|bisschen|wenig|paar)\\b)", CI);
 
-    private static final Pattern NOTE_START = Pattern.compile("\\b(ohne|nur|extra|bitte|mit)\\b", CI);
-    private static final Pattern NOTE_SPLIT = Pattern.compile("\\s+(?=bitte\\b)", CI);
+    private static final Pattern NOTE_START = Pattern.compile("\\b(ohne|nur|extra|dazu|zusätzlich|bitte|mit)\\b", CI);
+    private static final Pattern NOTE_SPLIT = Pattern.compile("\\s+(?=(bitte|extra|dazu|ohne)\\b)", CI);
     private static final Pattern CONTAINER = Pattern.compile("\\b(dosen?|flaschen?|fl\\.?|stk\\.?|stück)\\b", CI);
 
     private static final Set<String> TOPPINGS = new HashSet<>(Arrays.asList(
@@ -131,6 +148,12 @@ final class Parser {
                     .replaceAll("(?i)(\\s+(lieferung|liefern|abholung|abholen|adresse|lieferadresse|an|die|der|nach|zur|zu|bitte|um|für|fuer))+[\\s,;.!:]*$", "")
                     .replaceAll("(?i)[\\s,;.!]+(bitte|danke|und|oder)?[\\s,;.!]*$", "").trim();
             if (seg.isEmpty()) continue;
+            // "1x ohne zwiebel", "einer nur sauce": Hinweis für einen Teil des vorigen Artikels
+            if (!r.items.isEmpty() && seg.matches("(?is)^(ohne|nur|mit|extra|dazu|bitte|scharf|mild|halbiert|davon)\\b.*")) {
+                String t = seg.replaceAll("(?i)^(davon|bitte)\\s+", "").replaceAll("[,;.!]+$", "").trim();
+                r.items.get(r.items.size() - 1).notes.add(qtys.get(i) + "x " + cap(t));
+                continue;
+            }
             Item it = new Item();
             it.qty = qtys.get(i);
             Matcher nm = NOTE_START.matcher(seg);
@@ -145,7 +168,18 @@ final class Parser {
                 product = seg.substring(0, nm.start());
                 for (String n : NOTE_SPLIT.split(seg.substring(nm.start()))) {
                     String t = n.replaceAll("^\\s*bitte\\s+", "").replaceAll("(?i)[,;.!\\s]+(und|bitte)?\\s*$", "").trim();
-                    if (!t.isEmpty()) it.notes.add(cap(t));
+                    if (t.isEmpty()) continue;
+                    // "extra pommes", "dazu ketchup", "mit extra käse" -> Beilage mit Preis
+                    String tx = t.replaceAll("(?i)^(mit|und)\\s+", "");
+                    Matcher em = EXTRA.matcher(tx);
+                    if (em.find()) {
+                        for (String part : em.group(2).split("(?i)\\s*(,|\\bund\\b|\\+)\\s*")) {
+                            String ex = pretty(part, repl);
+                            if (!ex.isEmpty()) it.extras.add(ex);
+                        }
+                    } else {
+                        it.notes.add(cap(t));
+                    }
                 }
             }
             it.name = pretty(product, repl);

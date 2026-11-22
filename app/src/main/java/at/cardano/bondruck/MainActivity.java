@@ -41,7 +41,7 @@ public class MainActivity extends Activity {
 
     private EditText ip, port, wait, repl, ignore, free, labels, copies, header, search, lName, lPrice, lDesc;
     private final List<Integer> shown = new ArrayList<>();   // Index in labelList je Eintrag im Spinner
-    private Switch logoBon, logoLabel, headerBon, headerLabel;
+    private Switch logoBon, logoLabel, headerBon, headerLabel, prices;
     private Switch auto;
     private RadioGroup size, labelStyle;
     private Spinner labelPick;
@@ -261,6 +261,7 @@ public class MainActivity extends Activity {
         }
         size.check(Prefs.size(this));
         bon.addView(size);
+        prices = sw(bon, "Preise und Summe auf Bon (aus Etikettenliste)", Prefs.prices(this));
 
         LinearLayout a = card(p, "Automatisch drucken");
         auto = new Switch(this);
@@ -333,9 +334,18 @@ public class MainActivity extends Activity {
             t.setTypeface(Typeface.DEFAULT_BOLD);
             box.addView(t);
 
+            Parser.merge(r);
+            java.util.Map<String, Integer> pm = Prices.load(this);
             StringBuilder sb = new StringBuilder();
-            for (Parser.Item it : r.items) sb.append(it.qty).append("x ").append(it.name).append('\n');
+            for (Parser.Item it : r.items) {
+                Integer pr = Prices.of(pm, it.name);
+                sb.append(it.qty).append("x ").append(it.name);
+                if (pr != null) sb.append("   ").append(Prices.fmt(pr * Prices.qty(it)));
+                sb.append('\n');
+                for (String ex : it.extras) sb.append("   + ").append(ex).append('\n');
+            }
             if (r.items.isEmpty()) sb.append("(keine Artikel erkannt)\n");
+            else sb.append("Summe: € ").append(Prices.fmt(Prices.total(pm, r.items)[0])).append('\n');
             sb.append(r.address != null ? "Adresse: " + r.address : "Adresse: -");
             sb.append(o.printedAt > 0 ? "\nGedruckt " + hm.format(new Date(o.printedAt)) : "\nNoch nicht gedruckt");
             TextView d = new TextView(this);
@@ -447,6 +457,7 @@ public class MainActivity extends Activity {
                 .putString(Prefs.IGNORE, ignore.getText().toString())
                 .putString(Prefs.LABELS, labels.getText().toString())
                 .putString(Prefs.HEADER, header.getText().toString())
+                .putBoolean(Prefs.PRICES, prices.isChecked())
                 .putInt(Prefs.LABEL_STYLE, labelStyle.getCheckedRadioButtonId() == 102 ? 2 : 1)
                 .putBoolean(Prefs.LOGO_BON, logoBon.isChecked())
                 .putBoolean(Prefs.HEADER_BON, headerBon.isChecked())

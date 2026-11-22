@@ -51,7 +51,8 @@ final class Printer {
                 send(Prefs.ip(app), Prefs.port(app),
                         build(chat, msgs, times, r, known, reprint, Prefs.size(app),
                                 Prefs.logoBon(app) ? Prefs.logo(app) : null,
-                                Prefs.headerBon(app) ? Prefs.header(app) : null));
+                                Prefs.headerBon(app) ? Prefs.header(app) : null,
+                                Prefs.prices(app) ? Prices.load(app) : null));
                 OrderStore.markPrinted(app, chat);
                 OrderStore.log(chat + ": gedruckt");
                 Notifier.update(app, chat);
@@ -243,7 +244,8 @@ final class Printer {
                 send(Prefs.ip(app), Prefs.port(app),
                         build(chat, msgs, times, r, known, false, Prefs.size(app),
                                 Prefs.logoBon(app) ? Prefs.logo(app) : null,
-                                Prefs.headerBon(app) ? Prefs.header(app) : null));
+                                Prefs.headerBon(app) ? Prefs.header(app) : null,
+                                Prefs.prices(app) ? Prices.load(app) : null));
                 toast(app, "Bestellung gedruckt");
             } catch (Exception e) {
                 toast(app, "Druck fehlgeschlagen: " + e.getMessage());
@@ -267,7 +269,8 @@ final class Printer {
                 send(Prefs.ip(app), Prefs.port(app),
                         build("+43 660 1234567", msgs, times, r, false, false, Prefs.size(app),
                                 Prefs.logoBon(app) ? Prefs.logo(app) : null,
-                                Prefs.headerBon(app) ? Prefs.header(app) : null));
+                                Prefs.headerBon(app) ? Prefs.header(app) : null,
+                                Prefs.prices(app) ? Prices.load(app) : null));
                 toast(app, "Testdruck gesendet");
             } catch (Exception e) {
                 toast(app, "Druck fehlgeschlagen: " + e.getMessage());
@@ -302,6 +305,35 @@ final class Printer {
     static byte[] build(String chat, List<String> msgs, List<Long> times, Parser.Result r,
                         boolean knownAddress, boolean reprint, int size,
                         byte[] logo, String header) throws IOException {
+        return build(chat, msgs, times, r, knownAddress, reprint, size, logo, header, null);
+    }
+
+    /** Zeile mit Text links und Betrag rechts; langer Text wird umgebrochen, Betrag in die letzte Zeile. */
+    static String priced(String left, String right, int width) {
+        if (right == null || right.isEmpty()) return left + "\n";
+        int room = width - right.length() - 1;
+        List<String> lines = new ArrayList<>();
+        String indent = left.replaceAll("^( *).*$", "$1");
+        StringBuilder cur = new StringBuilder(indent);
+        for (String w : left.trim().split(" ")) {
+            if (cur.toString().trim().length() > 0 && cur.length() + 1 + w.length() > room) { lines.add(cur.toString()); cur.setLength(0); cur.append(indent).append("   "); }
+            if (cur.toString().trim().length() > 0 && !cur.toString().endsWith(" ")) cur.append(' ');
+            cur.append(w);
+        }
+        lines.add(cur.toString());
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < lines.size() - 1; i++) out.append(lines.get(i)).append('\n');
+        String last = lines.get(lines.size() - 1);
+        StringBuilder pad = new StringBuilder(last);
+        while (pad.length() < width - right.length()) pad.append(' ');
+        out.append(pad).append(right).append('\n');
+        return out.toString();
+    }
+
+    static byte[] build(String chat, List<String> msgs, List<Long> times, Parser.Result r,
+                        boolean knownAddress, boolean reprint, int size,
+                        byte[] logo, String header, java.util.Map<String, Integer> prices) throws IOException {
+        Parser.merge(r);
         byte sz = size >= 3 ? (byte) 0x11 : size == 2 ? (byte) 0x01 : (byte) 0x00;
         int width = size >= 3 ? 24 : 48;
         String line = repeat('-', width);
@@ -333,15 +365,32 @@ final class Printer {
         txt(b, "\n");
         b.write(new byte[]{0x1D, 0x21, sz});
         if (r.items.isEmpty()) txt(b, "(keine Artikel erkannt,\n siehe Original unten)\n");
+        int cols = size >= 3 ? 24 : 48;
         for (int i = 0; i < r.items.size(); i++) {
             Parser.Item it = r.items.get(i);
+            int q = Prices.qty(it);
+            Integer pr = prices == null ? null : Prices.of(prices, it.name);
             b.write(new byte[]{0x1B, 0x45, 0x01});
-            txt(b, it.qty + "x " + it.name + "\n");
+            txt(b, priced(it.qty + "x " + it.name, prices == null ? null : (pr == null ? "?" : Prices.fmt(pr * q)), cols));
             b.write(new byte[]{0x1B, 0x45, 0x00});
+            for (String ex : it.extras) {
+                Integer pe = prices == null ? null : Prices.of(prices, ex);
+                txt(b, priced("   + " + (q > 1 ? q + "x " : "") + ex,
+                        prices == null ? null : (pe == null ? "?" : Prices.fmt(pe * q)), cols));
+            }
             for (String n : it.notes) txt(b, "   - " + n + "\n");
             if (i < r.items.size() - 1) txt(b, "\n");          // Leerzeile zwischen Artikeln
         }
         b.write(new byte[]{0x1D, 0x21, 0x00});
+
+        if (prices != null && !r.items.isEmpty()) {
+            int[] tot = Prices.total(prices, r.items);
+            txt(b, "\n" + repeat('-', 48) + "\n");
+            b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01});
+            txt(b, priced("SUMME", "€ " + Prices.fmt(tot[0]), 24));
+            b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
+            if (tot[1] > 0) txt(b, "(" + tot[1] + (tot[1] == 1 ? " Position" : " Positionen") + " ohne Preis, siehe ?)\n");
+        }
 
         if (!r.hints.isEmpty()) {
             txt(b, "\n" + thin + "\n");

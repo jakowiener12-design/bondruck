@@ -17,6 +17,7 @@ final class Prefs {
     static final String IGNORE = "ignore";
     static final String LABELS = "labels";
     static final String HEADER = "header";
+    static final String PRICES = "prices";
     static final String LOGO_BON = "logoBon";
     static final String LOGO_LABEL = "logoLabel";
     static final String HEADER_BON = "headerBon";
@@ -78,6 +79,7 @@ final class Prefs {
     static String header(Context c) { return get(c).getString(HEADER, defHeader(c)); }
     static boolean logoBon(Context c) { return get(c).getBoolean(LOGO_BON, true); }
     static boolean logoLabel(Context c) { return get(c).getBoolean(LOGO_LABEL, false); }
+    static boolean prices(Context c) { return get(c).getBoolean(PRICES, true); }
     static int labelStyle(Context c) { return get(c).getInt(LABEL_STYLE, 1); }
     static boolean headerBon(Context c) { return get(c).getBoolean(HEADER_BON, true); }
     static boolean headerLabel(Context c) { return get(c).getBoolean(HEADER_LABEL, false); }
