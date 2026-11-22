@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_desc">Bondruck liest neue eingehende Nachrichten im geöffneten WhatsApp Chat, damit Bestellungen auch bei offenem Chat gedruckt werden. Es wird nur WhatsApp gelesen, nichts wird gesendet oder gespeichert außer der Bestellung.</string>
+    <string name="tile">Bondruck</string>
+</resources>

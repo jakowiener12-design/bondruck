@@ -100,17 +100,22 @@ public class WhatsAppListener extends NotificationListenerService {
         // Medien ohne Text überspringen
         if (text.matches("(?i)^(📷|🎤|🎥|📄)?\\s*(foto|bild|sprachnachricht|video|sticker|gif|dokument|standort|kontakt)\\s*$")) return;
 
-        OrderStore.Order o = OrderStore.add(this, chat, text, time);
-        OrderStore.log(chat + ": \"" + (text.length() > 40 ? text.substring(0, 40) + "…" : text) + "\"");
-        Notifier.update(this, chat);
-        if (Prefs.auto(this) && o.printedAt == 0) {
-            schedule(chat);
-            OrderStore.log(chat + ": Autodruck in " + Prefs.waitSec(this) + " s geprüft");
+        incoming(this, chat, text, time, "");
+    }
+
+    /** Neue Kundennachricht verarbeiten (aus Benachrichtigung oder offenem Chat). */
+    static void incoming(android.content.Context ctx, String chat, String text, long time, String via) {
+        final android.content.Context app = ctx.getApplicationContext();
+        OrderStore.Order o = OrderStore.add(app, chat, text, time);
+        OrderStore.log(chat + via + ": \"" + (text.length() > 40 ? text.substring(0, 40) + "…" : text) + "\"");
+        Notifier.update(app, chat);
+        if (Prefs.auto(app) && o.printedAt == 0) {
+            schedule(app, chat);
+            OrderStore.log(chat + ": Autodruck in " + Prefs.waitSec(app) + " s geprüft");
         }
     }
 
-    private void schedule(String chat) {
-        final android.content.Context app = getApplicationContext();
+    private static void schedule(final android.content.Context app, String chat) {
         cancelTimer(chat);
         Runnable r = () -> {
             timers.remove(chat);

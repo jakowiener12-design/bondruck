@@ -138,7 +138,16 @@ public class MainActivity extends Activity {
         free.setTextSize(18);
         free.setGravity(Gravity.TOP);
         free.setHint("Text eingeben oder aus einer anderen App über Teilen > Bondruck schicken");
-        button(c, "Als Bestellung drucken", true, () -> {
+        button(c, "Zwischenablage als Bestellung drucken", true, () -> {
+            android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+            CharSequence t = null;
+            if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0)
+                t = cm.getPrimaryClip().getItemAt(0).coerceToText(this);
+            if (t == null || t.toString().trim().isEmpty()) { toast("Zwischenablage ist leer"); return; }
+            free.setText(t);
+            Printer.printManual(this, t.toString());
+        });
+        button(c, "Als Bestellung drucken", false, () -> {
             String t = free.getText().toString();
             if (t.trim().isEmpty()) { toast("Kein Text"); return; }
             save();
@@ -201,6 +210,13 @@ public class MainActivity extends Activity {
                 startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
         button(perm, "Akku Optimierung ausschalten", false, () ->
                 startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)));
+
+        LinearLayout open = card(p, "Auch bei geöffnetem Chat");
+        hint(open, "Bei offenem Chat schickt WhatsApp keine Benachrichtigung. Mit der Bedienungshilfe liest Bondruck neue eingehende Nachrichten im offenen Chat. "
+                + "Unter Bedienungshilfe > Installierte Apps > Bondruck WhatsApp Chat einschalten.");
+        button(open, "Bedienungshilfe öffnen", false, () ->
+                startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
+        hint(open, "Schnell per Hand: Wischleiste oben bearbeiten (Stift), Kachel Bondruck hinzufügen. Nachrichten kopieren, Kachel tippen, fertig.");
 
         LinearLayout pr = card(p, "Drucker");
         LinearLayout r = row(pr);
@@ -370,8 +386,11 @@ public class MainActivity extends Activity {
                         new android.content.ComponentName(this, WhatsAppListener.class));
             } catch (Exception ignored) { }
         }
-        status.setText(ok ? "Aktiv: WhatsApp wird mitgelesen"
-                          : "Benachrichtigungszugriff fehlt\nEinstellungen > Berechtigungen");
+        String a11y = Settings.Secure.getString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        boolean openOk = a11y != null && a11y.contains(getPackageName());
+        status.setText((ok ? "Aktiv: WhatsApp Benachrichtigungen werden mitgelesen"
+                          : "Benachrichtigungszugriff fehlt (Einstellungen > Berechtigungen)")
+                + (openOk ? "\nAktiv: geöffneter Chat wird mitgelesen" : "\nGeöffneter Chat: aus (Einstellungen)"));
         status.setTextColor(ok ? Color.rgb(0, 130, 0) : Color.rgb(200, 0, 0));
         if (current == 0) refreshOrders();
     }
