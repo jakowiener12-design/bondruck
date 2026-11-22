@@ -25,6 +25,52 @@ final class Printer {
     private static final String TAG = "Bondruck";
     private static final Charset CP1252 = Charset.forName("windows-1252");
 
+    /** Zeichensätze: utf8 (Sunmi Standard), cp1252, cp858, cp437. Wird vor jedem Druck gesetzt. */
+    static String encoding = "utf8";
+
+    private static Charset charset(String e) {
+        switch (e) {
+            case "cp858": return Charset.isSupported("IBM00858") ? Charset.forName("IBM00858") : Charset.forName("IBM850");
+            case "cp437": return Charset.forName("IBM437");
+            case "cp1252": return CP1252;
+            default: return Charset.forName("UTF-8");
+        }
+    }
+
+    /** Drucker zurücksetzen und Zeichensatz wählen. */
+    static void init(ByteArrayOutputStream b, String e) throws IOException {
+        b.write(new byte[]{0x1B, 0x40});                          // Initialisieren
+        if (e.equals("utf8")) {
+            b.write(new byte[]{0x1C, 0x43, (byte) 0xFF});          // Sunmi: UTF-8
+        } else {
+            b.write(new byte[]{0x1C, 0x43, 0x00, 0x1C, 0x2E});     // Doppelbyte-Modus aus
+            int n = e.equals("cp858") ? 19 : e.equals("cp437") ? 0 : 16;
+            b.write(new byte[]{0x1B, 0x74, (byte) n});
+        }
+    }
+
+    /** Eine Testzeile pro Zeichensatz, damit man den richtigen auswählen kann. */
+    static void printCharsetTest(Context ctx) {
+        final Context app = ctx.getApplicationContext();
+        new Thread(() -> {
+            try {
+                ByteArrayOutputStream b = new ByteArrayOutputStream();
+                String old = encoding;
+                for (String e : new String[]{"utf8", "cp1252", "cp858", "cp437"}) {
+                    init(b, e);
+                    encoding = e;
+                    txt(b, e.toUpperCase(Locale.ROOT) + ": Straße äöü ÄÖÜ ß € 12,50\n");
+                }
+                encoding = old;
+                b.write(new byte[]{0x1B, 0x40, 0x1B, 0x64, 0x03, 0x1D, 0x56, 0x42, 0x00});
+                send(Prefs.ip(app), Prefs.port(app), b.toByteArray());
+                toast(app, "Test gedruckt: richtige Zeile unter Einstellungen wählen");
+            } catch (Exception e) {
+                toast(app, "Druck fehlgeschlagen: " + e.getMessage());
+            }
+        }).start();
+    }
+
     private Printer() {}
 
     /** Telefonnummer (Kontakte, frühere Bestellungen) und frühere Adresse ergänzen. Liefert true, wenn Adresse von früher. */
@@ -81,6 +127,7 @@ final class Printer {
                 }
             }
             pfand = Prefs.pfandCents(app);
+            encoding = Prefs.encoding(app);
             try {
                 send(Prefs.ip(app), Prefs.port(app),
                         build(chat, msgs, times, r, known, reprint, Prefs.size(app),
@@ -107,7 +154,8 @@ final class Printer {
         new Thread(() -> {
             try {
                 ByteArrayOutputStream b = new ByteArrayOutputStream();
-                b.write(new byte[]{0x1B, 0x40, 0x1C, 0x2E, 0x1B, 0x74, 16});
+                encoding = Prefs.encoding(app);
+                init(b, encoding);
                 b.write(new byte[]{0x1D, 0x21, sz});
                 txt(b, text.replace("\r", "").trim() + "\n");
                 b.write(new byte[]{0x1D, 0x21, 0x00});
@@ -128,7 +176,8 @@ final class Printer {
                 byte[] logo = Prefs.logoLabel(app) ? Prefs.logo(app) : null;
                 String header = Prefs.headerLabel(app) ? Prefs.header(app) : null;
                 ByteArrayOutputStream b = new ByteArrayOutputStream();
-                b.write(new byte[]{0x1B, 0x40, 0x1C, 0x2E, 0x1B, 0x74, 16});
+                encoding = Prefs.encoding(app);
+                init(b, encoding);
                 boolean compact = Prefs.labelStyle(app) == 1;
                 int pf = Prices.isDrink(name) ? Prefs.pfandCents(app) : 0;
                 for (int c = 0; c < Math.max(1, copies); c++) {
@@ -307,6 +356,7 @@ final class Printer {
             Parser.Result r = Parser.parse(msgs, Parser.replacements(Prefs.repl(app)));
             boolean known = enrich(app, chat, msgs, r);
             pfand = Prefs.pfandCents(app);
+            encoding = Prefs.encoding(app);
             try {
                 send(Prefs.ip(app), Prefs.port(app),
                         build(chat, msgs, times, r, known, false, Prefs.size(app),
@@ -333,6 +383,7 @@ final class Printer {
             times.add(now); times.add(now);
             Parser.Result r = Parser.parse(msgs, Parser.replacements(Prefs.repl(app)));
             pfand = Prefs.pfandCents(app);
+            encoding = Prefs.encoding(app);
             try {
                 send(Prefs.ip(app), Prefs.port(app),
                         build("+43 660 1234567", msgs, times, r, false, false, Prefs.size(app),
@@ -410,9 +461,7 @@ final class Printer {
         String thin = repeat('-', 48);
 
         ByteArrayOutputStream b = new ByteArrayOutputStream();
-        b.write(new byte[]{0x1B, 0x40});              // Initialisieren
-        b.write(new byte[]{0x1C, 0x2E});              // Chinesisch aus
-        b.write(new byte[]{0x1B, 0x74, 16});          // Zeichensatz WPC1252
+        init(b, encoding);
         head(b, logo, header);
 
         // Kopf
@@ -564,15 +613,28 @@ final class Printer {
     }
 
     private static void txt(ByteArrayOutputStream b, String s) throws IOException {
+        Charset cs = charset(encoding);
+        boolean utf = encoding.equals("utf8");
+        CharsetEncoder enc = cs.newEncoder();
         StringBuilder clean = new StringBuilder();
-        CharsetEncoder enc = CP1252.newEncoder();
         for (int i = 0; i < s.length(); ) {
             int cp = s.codePointAt(i);
             String ch = new String(Character.toChars(cp));
-            if (cp == '\n' || enc.canEncode(ch)) clean.append(ch);
+            if (cp == '\n') clean.append(ch);
+            else if (utf ? (cp < 0x0250 || "€„“”‚‘’–—…•·".indexOf(cp) >= 0) : enc.canEncode(ch)) clean.append(ch);
+            else if (!utf && "äöüÄÖÜß".indexOf(cp) >= 0) clean.append(fallback(ch));   // falls Zeichensatz es nicht kann
+            else if (!utf && cp == '€') clean.append("EUR");
             i += Character.charCount(cp);
         }
-        b.write(clean.toString().getBytes(CP1252));
+        b.write(clean.toString().getBytes(cs));
+    }
+
+    private static String fallback(String ch) {
+        switch (ch) {
+            case "ä": return "ae"; case "ö": return "oe"; case "ü": return "ue";
+            case "Ä": return "Ae"; case "Ö": return "Oe"; case "Ü": return "Ue";
+            default: return "ss";
+        }
     }
 
     private static synchronized void send(String ip, int port, byte[] data) throws IOException {

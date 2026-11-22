@@ -43,7 +43,7 @@ public class MainActivity extends Activity {
     private final List<Integer> shown = new ArrayList<>();   // Index in labelList je Eintrag im Spinner
     private Switch logoBon, logoLabel, headerBon, headerLabel, prices;
     private Switch auto;
-    private RadioGroup size, labelStyle;
+    private RadioGroup size, labelStyle, enc;
     private Spinner labelPick;
     private TextView status;
     private LinearLayout orderList, logList;
@@ -276,6 +276,20 @@ public class MainActivity extends Activity {
         ip = input(weighted(r, 2), "IP Adresse", sp.getString(Prefs.IP, Prefs.DEF_IP), InputType.TYPE_CLASS_TEXT, false);
         port = input(weighted(r, 1), "Port", sp.getString(Prefs.PORT, Prefs.DEF_PORT), InputType.TYPE_CLASS_NUMBER, false);
         button(pr, "Testdruck", true, () -> { save(); Printer.printTest(this); });
+        label(pr, "Zeichensatz (für ä ö ü ß €)");
+        enc = new RadioGroup(this);
+        String[][] encs = {{"utf8", "UTF8 (Sunmi Standard)"}, {"cp1252", "CP1252"}, {"cp858", "CP858"}, {"cp437", "CP437"}};
+        for (int i = 0; i < encs.length; i++) {
+            RadioButton rb = new RadioButton(this);
+            rb.setId(200 + i);
+            rb.setText(encs[i][1]);
+            rb.setTag(encs[i][0]);
+            enc.addView(rb);
+            if (encs[i][0].equals(Prefs.encoding(this))) rb.setChecked(true);
+        }
+        pr.addView(enc);
+        button(pr, "Zeichensatz testen", false, () -> Printer.printCharsetTest(this));
+        hint(pr, "Druckt eine Zeile pro Zeichensatz. Den auswählen, bei dem \"Straße äöü €\" richtig gedruckt wird.");
 
         LinearLayout bon = card(p, "Bon");
         label(bon, "Schriftgröße");
@@ -536,6 +550,8 @@ public class MainActivity extends Activity {
                 .putBoolean(Prefs.AUTO, auto.isChecked())
                 .putString(Prefs.WAIT, wait.getText().toString().trim())
                 .putString(Prefs.WINDOW, window.getText().toString().trim())
+                .putString(Prefs.ENC, enc.getCheckedRadioButtonId() >= 200
+                        ? (String) enc.findViewById(enc.getCheckedRadioButtonId()).getTag() : "utf8")
                 .putString(Prefs.REPL, repl.getText().toString())
                 .putString(Prefs.IGNORE, ignore.getText().toString())
                 .putString(Prefs.LABELS, labels.getText().toString())
