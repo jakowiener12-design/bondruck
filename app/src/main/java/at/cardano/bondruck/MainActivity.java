@@ -329,7 +329,8 @@ public class MainActivity extends Activity {
             box.setPadding(0, dp(8), 0, dp(12));
 
             TextView t = new TextView(this);
-            t.setText(o.chat + "   " + hm.format(new Date(o.last)));
+            t.setText(o.chat + "   " + hm.format(new Date(o.last)) + "   "
+                    + (r.type != null ? r.type : "Lieferung oder Abholung?"));
             t.setTextSize(17);
             t.setTypeface(Typeface.DEFAULT_BOLD);
             box.addView(t);

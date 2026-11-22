@@ -348,8 +348,16 @@ final class Printer {
         // Kopf
         b.write(new byte[]{0x1B, 0x61, 0x01});
         b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01});
-        txt(b, (r.type != null ? r.type : "BESTELLUNG") + "\n");
-        b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
+        if (r.type != null) {
+            txt(b, r.type + "\n");
+            b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
+        } else {
+            txt(b, "BESTELLUNG\n");
+            b.write(new byte[]{0x1D, 0x21, 0x01});
+            txt(b, "LIEFERUNG ODER ABHOLUNG?\n");
+            b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
+            txt(b, "bitte beim Kunden nachfragen\n");
+        }
         if (reprint) txt(b, "*** NACHDRUCK ***\n");
         long t = times.isEmpty() ? System.currentTimeMillis() : times.get(0);
         txt(b, new SimpleDateFormat("dd.MM.yyyy  HH:mm", Locale.GERMAN).format(new Date(t)) + " Uhr\n");

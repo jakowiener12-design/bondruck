@@ -103,8 +103,8 @@ final class Parser {
             String msg = Phone.remove(raw).replace('\r', ' ')
                     .replaceAll("(?i)\\b(tel|telefon|telefonnummer|handy|handynummer|nummer|nr)\\b\\.?:?", " ");
             String low = msg.toLowerCase(Locale.GERMAN);
-            if (low.matches("(?s).*\\b(abholung|abholen|hole .*ab|holen .*ab|selbst ?abholung)\\b.*")) r.type = "ABHOLUNG";
-            else if (low.matches("(?s).*\\b(lieferung|liefern|zustellung)\\b.*") && r.type == null) r.type = "LIEFERUNG";
+            if (low.matches("(?s).*\\b(abholung|abholen|abhole|hole\\b.*\\bab|holen\\b.*\\bab|hol\\b.*\\bab|selbst ?abholung|komme?n? (gleich |dann )?vorbei|zum mitnehmen|mitnehmen|take ?away|pick ?up)\\b.*")) r.type = "ABHOLUNG";
+            else if (low.matches("(?s).*\\b(lieferung|liefern|liefert|zustellung|zustellen|bringen|bringt|vorbeibringen|schicken|delivery)\\b.*") && r.type == null) r.type = "LIEFERUNG";
 
             Matcher am = ADDRESS.matcher(msg);
             if (am.find()) {
