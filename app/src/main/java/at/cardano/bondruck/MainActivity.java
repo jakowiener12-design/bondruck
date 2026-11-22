@@ -452,8 +452,8 @@ public class MainActivity extends Activity {
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
         if (item.getItemId() == 1) {
             showTab(0);
+            updateStatus();
             refreshOrders();
-            onResume();
             toast("Aktualisiert");
             return true;
         }
@@ -472,6 +472,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        updateStatus();
+        if (current == 0) refreshOrders();
+    }
+
+    private void updateStatus() {
         String list = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
         boolean ok = list != null && list.contains(getPackageName());
         if (ok) {
@@ -486,7 +491,6 @@ public class MainActivity extends Activity {
                           : "Benachrichtigungszugriff fehlt (Einstellungen > Berechtigungen)")
                 + (openOk ? "\nAktiv: geöffneter Chat wird mitgelesen" : "\nGeöffneter Chat: aus (Einstellungen)"));
         status.setTextColor(ok ? Color.rgb(0, 130, 0) : Color.rgb(200, 0, 0));
-        if (current == 0) refreshOrders();
     }
 
     @Override
