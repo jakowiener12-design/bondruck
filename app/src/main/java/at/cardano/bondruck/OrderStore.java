@@ -53,6 +53,14 @@ final class OrderStore {
         return orders.get(chat);
     }
 
+    /** Offene Bestellungen, neueste zuerst. */
+    static synchronized List<Order> list(Context c) {
+        load(c);
+        List<Order> l = new ArrayList<>(orders.values());
+        java.util.Collections.sort(l, (a, b) -> Long.compare(b.last, a.last));
+        return l;
+    }
+
     static synchronized void markPrinted(Context c, String chat) {
         load(c);
         Order o = orders.get(chat);
