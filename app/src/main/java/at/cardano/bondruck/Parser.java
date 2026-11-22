@@ -32,11 +32,13 @@ final class Parser {
     private static final String STREET =
             "(?:stra(?:ß|ss)e|str\\.?(?=\\s|\\d)|gasse|platz|weg|allee|ring|zeile|lände|kai|steig|promenade)";
     private static final String WORD = "[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß.\\-]*";
+    // Vorwörter nur groß geschrieben und auf derselben Zeile (z.B. "Simmeringer Hauptstraße", "Kaiser Ebersdorfer Straße")
+    private static final String PREFIX = "(?:(?-i:[A-ZÄÖÜ][a-zäöüß]+\\.?|St\\.|Dr\\.)[ \\t]+){0,3}";
     private static final Pattern ADDRESS = Pattern.compile(
-            "((?:" + WORD + "\\s+){0,3}[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß.\\-]{2,}?\\s?" + STREET + ")"
-                    + "\\s*(\\d{1,4}[a-zA-Z]?(?:\\s*[/\\-]\\s*\\d{1,4}[a-zA-Z]?)*)"
-                    + "((?:\\s*,?\\s*(?:top|tür|stiege|stg\\.?|stock|tor)\\s*\\d{1,3}[a-zA-Z]?)*)"
-                    + "(?:\\s*,?\\s*(1\\d{3})(?:\\s+wien)?)?", CI);
+            "(" + PREFIX + "[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß.\\-]{2,}?[ \\t]?" + STREET + ")"
+                    + "[ \\t]*(\\d{1,4}[a-zA-Z]?(?:[ \\t]*[/\\-][ \\t]*\\d{1,4}[a-zA-Z]?)*)"
+                    + "((?:[ \\t]*,?[ \\t]*(?:top|tür|stiege|stg\\.?|stock|tor)[ \\t]*\\d{1,3}[a-zA-Z]?)*)"
+                    + "(?:[ \\t]*,?[ \\t]*(1\\d{3})(?:[ \\t]+wien)?)?", CI);
 
     private static final Set<String> ADDRESS_LEAD = new HashSet<>(Arrays.asList(
             "lieferung", "liefern", "adresse", "an", "nach", "bitte", "in", "die", "der", "zur", "zu",
@@ -89,8 +91,22 @@ final class Parser {
 
             Matcher am = ADDRESS.matcher(msg);
             if (am.find()) {
-                r.address = cleanAddress(am);
-                msg = msg.substring(0, am.start()) + " " + msg.substring(am.end());
+                // Produktwörter und Füllwörter vorne abtrennen und im Text lassen
+                String[] w = am.group(1).trim().split("[ \\t]+");
+                int keep = 0;
+                while (keep < w.length - 1) {
+                    String lw = w[keep].toLowerCase(Locale.GERMAN).replaceAll("[:,.]", "");
+                    if (ADDRESS_LEAD.contains(lw) || repl.containsKey(lw) || TOPPINGS.contains(lw)
+                            || FILLER.contains(lw) || CONTAINER.matcher(lw).matches()) keep++;
+                    else break;
+                }
+                StringBuilder dropped = new StringBuilder();
+                for (int i = 0; i < keep; i++) {
+                    String lw = w[i].toLowerCase(Locale.GERMAN).replaceAll("[:,.]", "");
+                    if (!ADDRESS_LEAD.contains(lw) && !FILLER.contains(lw)) dropped.append(w[i]).append(' ');
+                }
+                r.address = cleanAddress(am, keep);
+                msg = msg.substring(0, am.start()) + " " + dropped + msg.substring(am.end());
             }
 
             for (String line : msg.split("\\n")) parseLine(line, r, repl);
@@ -242,10 +258,10 @@ final class Parser {
         return titleCase(p);
     }
 
-    private static String cleanAddress(Matcher am) {
+    private static String cleanAddress(Matcher am, int skip) {
         String street = am.group(1).trim();
         String[] w = street.split("\\s+");
-        int s = 0;
+        int s = Math.min(skip, w.length - 1);
         while (s < w.length - 1 && ADDRESS_LEAD.contains(w[s].toLowerCase(Locale.GERMAN).replaceAll("[:,.]", ""))) s++;
         street = String.join(" ", Arrays.copyOfRange(w, s, w.length));
         street = Character.toUpperCase(street.charAt(0)) + street.substring(1);
