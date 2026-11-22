@@ -67,11 +67,19 @@ final class Prices {
         return (cents / 100) + "," + String.format(Locale.GERMAN, "%02d", cents % 100);
     }
 
-    /** Summe und Anzahl Positionen ohne Preis. */
-    static int[] total(Map<String, Integer> m, List<Parser.Item> items) {
+    /** Getränk mit Pfand: Name enthält eine Literangabe wie 0,33l oder 0,5l. */
+    static boolean isDrink(String name) {
+        return name != null && name.matches("(?iu).*\\b\\d+[,.]\\d+\\s*l\\b.*");
+    }
+
+    static int[] total(Map<String, Integer> m, List<Parser.Item> items) { return total(m, items, 0); }
+
+    /** Summe (inkl. Pfand) und Anzahl Positionen ohne Preis. */
+    static int[] total(Map<String, Integer> m, List<Parser.Item> items, int pfand) {
         int sum = 0, missing = 0;
         for (Parser.Item it : items) {
             int q = qty(it);
+            if (pfand > 0 && isDrink(it.name)) sum += pfand * q;
             Integer p = of(m, it.name);
             if (p == null) missing++; else sum += p * q;
             for (String ex : it.extras) {

@@ -18,11 +18,15 @@ final class Prefs {
     static final String LABELS = "labels";
     static final String HEADER = "header";
     static final String PRICES = "prices";
+    static final String STREETS = "streets";
+    static final String LEARNED = "streetsLearned";
+    static final String PFAND = "pfand";
+    private static boolean streetsLoaded;
     static final String LOGO_BON = "logoBon";
     static final String LOGO_LABEL = "logoLabel";
     static final String HEADER_BON = "headerBon";
     static final String HEADER_LABEL = "headerLabel";
-    private static final int DEFAULTS_VERSION = 3;
+    private static final int DEFAULTS_VERSION = 4;
     static final String LABEL_STYLE = "labelStyle"; // 1 kompakt, 2 groß zentriert
     private static final java.util.Map<String, String> assets = new java.util.HashMap<>();
 
@@ -39,7 +43,12 @@ final class Prefs {
             SharedPreferences.Editor e = sp.edit();
             if (v < 2) e.remove(REPL).remove(LABELS);          // neue Speisekarte übernehmen
             if (v < 3) e.putBoolean(LOGO_LABEL, false).putBoolean(HEADER_LABEL, false);
+            if (v < 4) e.remove(REPL);        // Produktnamen jetzt: Standard + eigene Ergänzungen
             e.putInt("defver", DEFAULTS_VERSION).apply();
+        }
+        if (!streetsLoaded) {
+            streetsLoaded = true;
+            reloadStreets(c, sp);
         }
         return sp;
     }
@@ -73,6 +82,29 @@ final class Prefs {
         }
     }
 
+    static void reloadStreets(Context c) { reloadStreets(c, c.getSharedPreferences("bondruck", Context.MODE_PRIVATE)); }
+
+    private static void reloadStreets(Context c, SharedPreferences sp) {
+        Streets.load(sp.getString(STREETS, ""), sp.getString(LEARNED, ""), asset(c, "strassen.txt"));
+    }
+
+    /** Erkannte Straße (mit Straßen-Endung) für Tippfehler-Korrektur merken. */
+    static void learnStreet(Context c, String address) {
+        if (address == null) return;
+        String street = address.replaceAll("\\s+\\d.*$", "").trim();
+        if (street.length() < 5 || Streets.match(street) != null) return;
+        if (!street.matches("(?iu).*(straße|strasse|gasse|weg|platz|allee|ring|zeile|lände)$")) return;
+        SharedPreferences sp = get(c);
+        String plz = address.matches(".*,\\s*(\\d{4}.*)$") ? address.replaceAll(".*,\\s*(\\d{4}.*)$", "$1") : "";
+        sp.edit().putString(LEARNED, sp.getString(LEARNED, "") + "\n" + street + ";" + plz).apply();
+        reloadStreets(c, sp);
+    }
+
+    static int pfandCents(Context c) {
+        Integer v = Prices.cents(get(c).getString(PFAND, "0,25"));
+        return v == null ? 0 : v;
+    }
+
     static String defRepl(Context c) { return asset(c, "produktnamen.txt"); }
     static String defLabels(Context c) { return asset(c, "etiketten.txt"); }
     static String defHeader(Context c) { return asset(c, "firmendaten.txt"); }
@@ -90,7 +122,10 @@ final class Prefs {
     static boolean auto(Context c) { return get(c).getBoolean(AUTO, true); }
     static int waitSec(Context c) { return Math.max(15, num(get(c).getString(WAIT, DEF_WAIT), 120)); }
     static String labels(Context c) { return get(c).getString(LABELS, defLabels(c)); }
-    static String repl(Context c) { return get(c).getString(REPL, defRepl(c)); }
+    /** Für die Erkennung: Speisekarte plus eigene Einträge (eigene überschreiben). */
+    static String repl(Context c) { return defRepl(c) + "\n" + get(c).getString(REPL, ""); }
+    /** Nur die eigenen Einträge (Textfeld in den Einstellungen). */
+    static String replOwn(Context c) { return get(c).getString(REPL, ""); }
 
     static Set<String> ignored(Context c) {
         Set<String> s = new HashSet<>();

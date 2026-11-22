@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
     private static final int BG = Color.rgb(242, 242, 242);
     private static final String[] TABS = {"Bestellungen", "Text", "Etiketten", "Einstellungen"};
 
-    private EditText ip, port, wait, repl, ignore, free, labels, copies, header, search, lName, lPrice, lDesc;
+    private EditText ip, port, wait, repl, ignore, free, labels, copies, header, streets, pfand, search, lName, lPrice, lDesc;
     private final List<Integer> shown = new ArrayList<>();   // Index in labelList je Eintrag im Spinner
     private Switch logoBon, logoLabel, headerBon, headerLabel, prices;
     private Switch auto;
@@ -189,6 +189,7 @@ public class MainActivity extends Activity {
         copies = input(weighted(pr, 1), "Anzahl", "1", InputType.TYPE_CLASS_NUMBER, false);
         lDesc = input(c, "Beschreibung", "", InputType.TYPE_CLASS_TEXT, true);
         lDesc.setMinLines(2);
+        hint(c, "Getränke mit Literangabe (z.B. 0,33l) bekommen automatisch \"+ Pfand\" aufs Etikett.");
 
         button(c, "Etikett drucken", true, () -> {
             String n = lName.getText().toString().trim();
@@ -262,6 +263,8 @@ public class MainActivity extends Activity {
         size.check(Prefs.size(this));
         bon.addView(size);
         prices = sw(bon, "Preise und Summe auf Bon (aus Etikettenliste)", Prefs.prices(this));
+        pfand = input(bon, "Pfand je Getränk (auch auf Etiketten, 0 = aus)", sp.getString(Prefs.PFAND, "0,25"),
+                InputType.TYPE_CLASS_TEXT, false);
 
         LinearLayout a = card(p, "Automatisch drucken");
         auto = new Switch(this);
@@ -281,17 +284,23 @@ public class MainActivity extends Activity {
         button(fd, "Firmendaten zurücksetzen", false, () -> header.setText(Prefs.defHeader(this)));
 
         LinearLayout pn = card(p, "Produktnamen");
-        hint(pn, "Kundentext = Text am Bon, eine Zeile je Eintrag. Beispiel: kebap = Hühner Sandwich");
-        repl = input(pn, null, Prefs.repl(this), InputType.TYPE_CLASS_TEXT, true);
+        hint(pn, "Die Speisekarte mit über 400 Schreibweisen (auch Türkisch) ist eingebaut. Hier nur eigene Ergänzungen eintragen, "
+                + "eine Zeile je Eintrag: Kundentext = Text am Bon. Beispiel: big kebap = Rind-Sandwich");
+        repl = input(pn, null, Prefs.replOwn(this), InputType.TYPE_CLASS_TEXT, true);
         repl.setMaxLines(12);
         repl.setVerticalScrollBarEnabled(true);
-        button(pn, "Speisekarte von Webseite wiederherstellen", false, () -> {
-            repl.setText(Prefs.defRepl(this));
+        button(pn, "Etiketten und Produktnamen zurücksetzen", false, () -> {
+            repl.setText("");
             labels.setText(Prefs.defLabels(this));
             save();
             fillLabels();
             toast("Produktnamen und Etiketten zurückgesetzt");
         });
+
+        LinearLayout stc = card(p, "Straßen");
+        hint(stc, Streets.size() + " Straßen aus Simmering, Schwechat und Mannswörth sind bekannt und werden bei Tippfehlern korrigiert. "
+                + "Neue Straßen merkt sich die App automatisch. Hier eigene ergänzen, eine je Zeile: Name;PLZ Ort  z.B. Frauenfeldgasse;2320 Schwechat");
+        streets = input(stc, null, sp.getString(Prefs.STREETS, ""), InputType.TYPE_CLASS_TEXT, true);
 
         LinearLayout ig = card(p, "Ausgenommene Chats");
         hint(ig, "Name oder Nummer wie in WhatsApp, eine je Zeile. Diese Chats werden nie gedruckt.");
@@ -346,7 +355,7 @@ public class MainActivity extends Activity {
                 for (String ex : it.extras) sb.append("   + ").append(ex).append('\n');
             }
             if (r.items.isEmpty()) sb.append("(keine Artikel erkannt)\n");
-            else sb.append("Summe: € ").append(Prices.fmt(Prices.total(pm, r.items)[0])).append('\n');
+            else sb.append("Summe: € ").append(Prices.fmt(Prices.total(pm, r.items, Prefs.pfandCents(this))[0])).append('\n');
             sb.append(r.address != null ? "Adresse: " + r.address : "Adresse: -");
             sb.append(o.printedAt > 0 ? "\nGedruckt " + hm.format(new Date(o.printedAt)) : "\nNoch nicht gedruckt");
             TextView d = new TextView(this);
@@ -447,6 +456,11 @@ public class MainActivity extends Activity {
     }
 
     private void save() {
+        saveNow();
+        Prefs.reloadStreets(this);
+    }
+
+    private void saveNow() {
         int s = size.getCheckedRadioButtonId();
         Prefs.get(this).edit()
                 .putString(Prefs.IP, ip.getText().toString().trim())
@@ -459,6 +473,8 @@ public class MainActivity extends Activity {
                 .putString(Prefs.LABELS, labels.getText().toString())
                 .putString(Prefs.HEADER, header.getText().toString())
                 .putBoolean(Prefs.PRICES, prices.isChecked())
+                .putString(Prefs.PFAND, pfand.getText().toString().trim())
+                .putString(Prefs.STREETS, streets.getText().toString())
                 .putInt(Prefs.LABEL_STYLE, labelStyle.getCheckedRadioButtonId() == 102 ? 2 : 1)
                 .putBoolean(Prefs.LOGO_BON, logoBon.isChecked())
                 .putBoolean(Prefs.HEADER_BON, headerBon.isChecked())

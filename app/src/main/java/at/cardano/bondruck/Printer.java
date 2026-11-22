@@ -41,12 +41,13 @@ final class Printer {
             }
             Parser.Result r = Parser.parse(msgs, Parser.replacements(Prefs.repl(app)));
             boolean known = false;
-            if (r.address != null) OrderStore.rememberAddress(app, chat, r.address);
+            if (r.address != null) { OrderStore.rememberAddress(app, chat, r.address); Prefs.learnStreet(app, r.address); }
             else if (!"ABHOLUNG".equals(r.type)) {
                 r.address = OrderStore.knownAddress(app, chat);
                 known = r.address != null;
             }
             boolean reprint = o.printedAt > 0;
+            pfand = Prefs.pfandCents(app);
             try {
                 send(Prefs.ip(app), Prefs.port(app),
                         build(chat, msgs, times, r, known, reprint, Prefs.size(app),
@@ -96,9 +97,10 @@ final class Printer {
                 ByteArrayOutputStream b = new ByteArrayOutputStream();
                 b.write(new byte[]{0x1B, 0x40, 0x1C, 0x2E, 0x1B, 0x74, 16});
                 boolean compact = Prefs.labelStyle(app) == 1;
+                int pf = Prices.isDrink(name) ? Prefs.pfandCents(app) : 0;
                 for (int c = 0; c < Math.max(1, copies); c++) {
                     head(b, logo, header);
-                    if (compact) { compactLabel(b, name, price, desc); continue; }
+                    if (compact) { compactLabel(b, name, price, desc, pf); continue; }
                     b.write(new byte[]{0x1B, 0x61, 0x01});             // zentriert
                     // Name: doppelt hoch und breit, 24 Zeichen je Zeile, 2 Zeilen fix
                     b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01});
@@ -114,6 +116,7 @@ final class Printer {
                     if (!pr.isEmpty() && !pr.contains("€")) pr = "€ " + pr;
                     txt(b, pr + "\n");
                     b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
+                    if (pf > 0) txt(b, "+ " + Prices.fmt(pf) + " € Pfand\n");
                     b.write(new byte[]{0x1B, 0x61, 0x00});
                     b.write(new byte[]{0x1B, 0x64, 0x03, 0x1D, 0x56, 0x42, 0x00});
                 }
@@ -130,6 +133,10 @@ final class Printer {
      * Feste Höhe: Name 2 Zeilen, Beschreibung 3 Zeilen (letzte neben dem Preis).
      */
     static void compactLabel(ByteArrayOutputStream b, String name, String price, String desc) throws IOException {
+        compactLabel(b, name, price, desc, 0);
+    }
+
+    static void compactLabel(ByteArrayOutputStream b, String name, String price, String desc, int pfand) throws IOException {
         String pr = price.trim();
         if (!pr.isEmpty() && !pr.contains("€")) pr = "€ " + pr;
         String box = " " + pr + " ";
@@ -158,6 +165,13 @@ final class Printer {
         txt(b, box);
         b.write(new byte[]{0x1D, 0x42, 0x00, 0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
         txt(b, "\n");
+        if (pfand > 0) {
+            b.write(new byte[]{0x1B, 0x61, 0x02, 0x1B, 0x45, 0x01});     // rechts, fett
+            txt(b, "+ " + Prices.fmt(pfand) + " € Pfand\n");
+            b.write(new byte[]{0x1B, 0x45, 0x00, 0x1B, 0x61, 0x00});
+        } else {
+            txt(b, "\n");                                             // gleiche Höhe wie mit Pfand
+        }
         b.write(new byte[]{0x1B, 0x64, 0x03, 0x1D, 0x56, 0x42, 0x00});
     }
 
@@ -235,11 +249,12 @@ final class Printer {
             }
             Parser.Result r = Parser.parse(msgs, Parser.replacements(Prefs.repl(app)));
             boolean known = false;
-            if (r.address != null) OrderStore.rememberAddress(app, chat, r.address);
+            if (r.address != null) { OrderStore.rememberAddress(app, chat, r.address); Prefs.learnStreet(app, r.address); }
             else if (!"ABHOLUNG".equals(r.type)) {
                 r.address = OrderStore.knownAddress(app, chat);
                 known = r.address != null;
             }
+            pfand = Prefs.pfandCents(app);
             try {
                 send(Prefs.ip(app), Prefs.port(app),
                         build(chat, msgs, times, r, known, false, Prefs.size(app),
@@ -265,6 +280,7 @@ final class Printer {
             long now = System.currentTimeMillis();
             times.add(now); times.add(now);
             Parser.Result r = Parser.parse(msgs, Parser.replacements(Prefs.repl(app)));
+            pfand = Prefs.pfandCents(app);
             try {
                 send(Prefs.ip(app), Prefs.port(app),
                         build("+43 660 1234567", msgs, times, r, false, false, Prefs.size(app),
@@ -330,6 +346,8 @@ final class Printer {
         return out.toString();
     }
 
+    static int pfand = 25;   // wird vor dem Druck aus den Einstellungen gesetzt
+
     static byte[] build(String chat, List<String> msgs, List<Long> times, Parser.Result r,
                         boolean knownAddress, boolean reprint, int size,
                         byte[] logo, String header, java.util.Map<String, Integer> prices) throws IOException {
@@ -381,6 +399,9 @@ final class Printer {
             b.write(new byte[]{0x1B, 0x45, 0x01});
             txt(b, priced(it.qty + "x " + it.name, prices == null ? null : (pr == null ? "?" : Prices.fmt(pr * q)), cols));
             b.write(new byte[]{0x1B, 0x45, 0x00});
+            if (prices != null && pfand > 0 && Prices.isDrink(it.name)) {
+                txt(b, priced("   + Pfand " + (q > 1 ? q + "x " : "") + Prices.fmt(pfand), Prices.fmt(pfand * q), cols));
+            }
             for (String ex : it.extras) {
                 Integer pe = prices == null ? null : Prices.of(prices, ex);
                 txt(b, priced("   + " + (q > 1 ? q + "x " : "") + ex,
@@ -392,7 +413,7 @@ final class Printer {
         b.write(new byte[]{0x1D, 0x21, 0x00});
 
         if (prices != null && !r.items.isEmpty()) {
-            int[] tot = Prices.total(prices, r.items);
+            int[] tot = Prices.total(prices, r.items, pfand);
             txt(b, "\n" + repeat('-', 48) + "\n");
             b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01});
             txt(b, priced("SUMME", "€ " + Prices.fmt(tot[0]), 24));
