@@ -125,14 +125,21 @@ public class MainActivity extends Activity {
 
     private LinearLayout buildText() {
         LinearLayout p = column();
-        LinearLayout c = card(p, "Freien Text drucken");
+        LinearLayout c = card(p, "Text oder Bestellung drucken");
+        hint(c, "Nachrichten in WhatsApp markieren, kopieren und hier einfügen, oder über Teilen > Bondruck schicken.");
         free = input(c, null, "", InputType.TYPE_CLASS_TEXT, true);
         free.setMinLines(8);
         free.setTextSize(18);
         free.setGravity(Gravity.TOP);
         free.setHint("Text eingeben oder aus einer anderen App über Teilen > Bondruck schicken");
+        button(c, "Als Bestellung drucken", true, () -> {
+            String t = free.getText().toString();
+            if (t.trim().isEmpty()) { toast("Kein Text"); return; }
+            save();
+            Printer.printManual(this, t);
+        });
         LinearLayout row = row(c);
-        button(row, "Drucken", true, () -> {
+        button(row, "Als Text drucken", false, () -> {
             String t = free.getText().toString();
             if (t.trim().isEmpty()) { toast("Kein Text"); return; }
             save();

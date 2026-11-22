@@ -148,6 +148,69 @@ final class Printer {
         return out;
     }
 
+    private static final java.util.regex.Pattern WA_LINE = java.util.regex.Pattern.compile(
+            "^\\[?(\\d{1,2}[:.]\\d{2})(?::\\d{2})?,?\\s+(\\d{1,2}\\.\\d{1,2}\\.\\d{2,4})\\]?\\s*(?:-\\s*)?([^:]{1,60}):\\s?(.*)$");
+
+    /** Kopierten Text (auch WhatsApp Kopie mit [Zeit, Datum] Name:) wie eine Bestellung drucken. */
+    static void printManual(Context ctx, String text) {
+        final Context app = ctx.getApplicationContext();
+        new Thread(() -> {
+            List<String> msgs = new ArrayList<>();
+            List<Long> times = new ArrayList<>();
+            java.util.Map<String, Integer> senders = new java.util.LinkedHashMap<>();
+            SimpleDateFormat f = new SimpleDateFormat("HH:mm dd.MM.yyyy", Locale.GERMAN);
+            for (String line : text.replace("\r", "").split("\n")) {
+                java.util.regex.Matcher m = WA_LINE.matcher(line.trim());
+                if (m.find()) {
+                    String date = m.group(2);
+                    if (date.matches(".*\\.\\d{2}$")) date = date.substring(0, date.length() - 2) + "20" + date.substring(date.length() - 2);
+                    long t;
+                    try { t = f.parse(m.group(1).replace('.', ':') + " " + date).getTime(); }
+                    catch (Exception e) { t = System.currentTimeMillis(); }
+                    String who = m.group(3).replace("\u202A", "").replace("\u202C", "").trim();
+                    senders.put(who, senders.containsKey(who) ? senders.get(who) + 1 : 1);
+                    msgs.add(m.group(4));
+                    times.add(t);
+                } else if (!line.trim().isEmpty()) {
+                    if (msgs.isEmpty() || senders.isEmpty()) {
+                        msgs.add(line);
+                        times.add(System.currentTimeMillis());
+                    } else {
+                        int last = msgs.size() - 1;
+                        msgs.set(last, msgs.get(last) + "\n" + line);
+                    }
+                }
+            }
+            if (msgs.isEmpty()) { toast(app, "Kein Text"); return; }
+            // Kunde = häufigster Absender, sonst erste Telefonnummer im Text
+            String chat = null;
+            int best = 0;
+            for (java.util.Map.Entry<String, Integer> e : senders.entrySet()) {
+                if (e.getValue() > best) { best = e.getValue(); chat = e.getKey(); }
+            }
+            if (chat == null) {
+                List<String> ph = Phone.findAll(text);
+                chat = ph.isEmpty() ? "Manuelle Bestellung" : ph.get(0);
+            }
+            Parser.Result r = Parser.parse(msgs, Parser.replacements(Prefs.repl(app)));
+            boolean known = false;
+            if (r.address != null) OrderStore.rememberAddress(app, chat, r.address);
+            else if (!"ABHOLUNG".equals(r.type)) {
+                r.address = OrderStore.knownAddress(app, chat);
+                known = r.address != null;
+            }
+            try {
+                send(Prefs.ip(app), Prefs.port(app),
+                        build(chat, msgs, times, r, known, false, Prefs.size(app),
+                                Prefs.logoBon(app) ? Prefs.logo(app) : null,
+                                Prefs.headerBon(app) ? Prefs.header(app) : null));
+                toast(app, "Bestellung gedruckt");
+            } catch (Exception e) {
+                toast(app, "Druck fehlgeschlagen: " + e.getMessage());
+            }
+        }).start();
+    }
+
     /** Testbon mit Beispielbestellung. */
     static void printTest(Context ctx) {
         final Context app = ctx.getApplicationContext();
