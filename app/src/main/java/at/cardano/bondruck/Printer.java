@@ -49,7 +49,9 @@ final class Printer {
             boolean reprint = o.printedAt > 0;
             try {
                 send(Prefs.ip(app), Prefs.port(app),
-                        build(chat, msgs, times, r, known, reprint, Prefs.size(app)));
+                        build(chat, msgs, times, r, known, reprint, Prefs.size(app),
+                                Prefs.logoBon(app) ? Prefs.logo(app) : null,
+                                Prefs.headerBon(app) ? Prefs.header(app) : null));
                 OrderStore.markPrinted(app, chat);
                 Notifier.update(app, chat);
                 if (manual) toast(app, "Gedruckt");
@@ -86,9 +88,12 @@ final class Printer {
         final Context app = ctx.getApplicationContext();
         new Thread(() -> {
             try {
+                byte[] logo = Prefs.logoLabel(app) ? Prefs.logo(app) : null;
+                String header = Prefs.headerLabel(app) ? Prefs.header(app) : null;
                 ByteArrayOutputStream b = new ByteArrayOutputStream();
                 b.write(new byte[]{0x1B, 0x40, 0x1C, 0x2E, 0x1B, 0x74, 16});
                 for (int c = 0; c < Math.max(1, copies); c++) {
+                    head(b, logo, header);
                     b.write(new byte[]{0x1B, 0x61, 0x01});             // zentriert
                     // Name: doppelt hoch und breit, 24 Zeichen je Zeile, 2 Zeilen fix
                     b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01});
@@ -157,7 +162,9 @@ final class Printer {
             Parser.Result r = Parser.parse(msgs, Parser.replacements(Prefs.repl(app)));
             try {
                 send(Prefs.ip(app), Prefs.port(app),
-                        build("+43 660 1234567", msgs, times, r, false, false, Prefs.size(app)));
+                        build("+43 660 1234567", msgs, times, r, false, false, Prefs.size(app),
+                                Prefs.logoBon(app) ? Prefs.logo(app) : null,
+                                Prefs.headerBon(app) ? Prefs.header(app) : null));
                 toast(app, "Testdruck gesendet");
             } catch (Exception e) {
                 toast(app, "Druck fehlgeschlagen: " + e.getMessage());
@@ -165,8 +172,33 @@ final class Printer {
         }).start();
     }
 
+    /** Kopf: Logo und Firmendaten zentriert. */
+    static void head(ByteArrayOutputStream b, byte[] logo, String header) throws IOException {
+        b.write(new byte[]{0x1B, 0x61, 0x01});
+        if (logo != null) {
+            b.write(logo);
+            txt(b, "\n");
+        }
+        if (header != null && !header.trim().isEmpty()) {
+            String[] lines = header.trim().split("\n");
+            for (int i = 0; i < lines.length; i++) {
+                b.write(new byte[]{0x1B, 0x45, (byte) (i < 2 ? 1 : 0)});
+                txt(b, lines[i].trim() + "\n");
+            }
+            b.write(new byte[]{0x1B, 0x45, 0x00});
+        }
+        b.write(new byte[]{0x1B, 0x61, 0x00});
+        if (logo != null || (header != null && !header.trim().isEmpty())) txt(b, "\n");
+    }
+
     static byte[] build(String chat, List<String> msgs, List<Long> times, Parser.Result r,
                         boolean knownAddress, boolean reprint, int size) throws IOException {
+        return build(chat, msgs, times, r, knownAddress, reprint, size, null, null);
+    }
+
+    static byte[] build(String chat, List<String> msgs, List<Long> times, Parser.Result r,
+                        boolean knownAddress, boolean reprint, int size,
+                        byte[] logo, String header) throws IOException {
         byte sz = size >= 3 ? (byte) 0x11 : size == 2 ? (byte) 0x01 : (byte) 0x00;
         int width = size >= 3 ? 24 : 48;
         String line = repeat('-', width);
@@ -176,6 +208,7 @@ final class Printer {
         b.write(new byte[]{0x1B, 0x40});              // Initialisieren
         b.write(new byte[]{0x1C, 0x2E});              // Chinesisch aus
         b.write(new byte[]{0x1B, 0x74, 16});          // Zeichensatz WPC1252
+        head(b, logo, header);
 
         // Kopf
         b.write(new byte[]{0x1B, 0x61, 0x01});

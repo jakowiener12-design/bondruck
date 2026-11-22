@@ -111,16 +111,22 @@ final class Parser {
         addHint(line.substring(0, first), r);
         for (int i = 0; i < spans.size(); i++) {
             int end = i + 1 < spans.size() ? spans.get(i + 1)[0] : line.length();
-            String seg = line.substring(spans.get(i)[1], end).replaceAll("(?i)[\\s,;.!]+(bitte|danke)?[\\s,;.!]*$", "").trim();
+            String seg = line.substring(spans.get(i)[1], end).replaceAll("(?i)[\\s,;.!]+(bitte|danke|und|oder)?[\\s,;.!]*$", "").trim();
             if (seg.isEmpty()) continue;
             Item it = new Item();
             it.qty = qtys.get(i);
             Matcher nm = NOTE_START.matcher(seg);
             String product = seg;
-            if (nm.find() && nm.start() > 0) {
+            boolean found = nm.find();
+            // "pizza mit sucuk": "mit" gehört hier zum Produkt
+            while (found && nm.group(1).equalsIgnoreCase("mit")
+                    && seg.substring(0, nm.start()).trim().matches("(?i)(pizza|pizzen|pide|baguette)")) {
+                found = nm.find();
+            }
+            if (found && nm.start() > 0) {
                 product = seg.substring(0, nm.start());
                 for (String n : NOTE_SPLIT.split(seg.substring(nm.start()))) {
-                    String t = n.replaceAll("^\\s*bitte\\s+", "").replaceAll("[,;.!]+$", "").trim();
+                    String t = n.replaceAll("^\\s*bitte\\s+", "").replaceAll("(?i)[,;.!\\s]+(und|bitte)?\\s*$", "").trim();
                     if (!t.isEmpty()) it.notes.add(cap(t));
                 }
             }
@@ -143,51 +149,97 @@ final class Parser {
         if (!onlyFiller) r.hints.add(cap(t));
     }
 
+    private static final Pattern SIZE_MINI = Pattern.compile("\\b(mini|minipizza|mini-pizza|klein[e]?)\\b", CI);
+    private static final Pattern SIZE_FAM = Pattern.compile("\\b(familie|familien|family|familienpizza|familypizza|party)\\b", CI);
+    private static final Pattern DRINK_BIG = Pattern.compile("(0\\s*[,.]\\s*5\\s*l?|\\bhalbe\\b|\\bgro(ß|ss)e?[rn]?\\b|\\bflaschen?\\b|1/2)", CI);
+    private static final Pattern DRINK_SMALL = Pattern.compile("0\\s*[,.]\\s*33\\s*l?", CI);
+    private static final String[] BASES = {"pizza", "pide", "baguette"};
+
     static String pretty(String product, Map<String, String> repl) {
+        boolean big = DRINK_BIG.matcher(product).find();
+        String raw = DRINK_SMALL.matcher(DRINK_BIG.matcher(product).replaceAll(" ")).replaceAll(" ");
         String p = norm(product);
         String container = null;
         Matcher c = CONTAINER.matcher(p);
         if (c.find()) {
             String w = c.group(1).toLowerCase(Locale.GERMAN);
             container = w.startsWith("d") ? "Dose" : w.startsWith("f") ? "Flasche" : null;
-            p = CONTAINER.matcher(p).replaceAll(" ").replaceAll("\\s+", " ").trim();
         }
         p = p.replaceAll("^(und|noch|bitte)\\s+", "").replaceAll("\\s+(und|bitte)$", "").trim();
         if (p.isEmpty()) return "";
 
-        String result = null;
-        String noPizza = p.replaceAll("\\bpizz(?:a|en)\\b", " ").replaceAll("\\s+", " ").trim();
-        if (repl.containsKey(p)) result = repl.get(p);
-        else if (!noPizza.isEmpty() && repl.containsKey(noPizza)) result = repl.get(noPizza);
+        String result = repl.get(p);                      // 1. exakter Treffer, z.B. "großer salat"
+        String size = null;
+        if (result == null) {
+            String q = norm(raw);
+            q = CONTAINER.matcher(q).replaceAll(" ");
+            if (SIZE_MINI.matcher(q).find()) size = "mini";
+            else if (SIZE_FAM.matcher(q).find()) size = "fam";
+            q = SIZE_FAM.matcher(SIZE_MINI.matcher(q).replaceAll(" ")).replaceAll(" ")
+                    .replaceAll("^(und|noch|bitte)\\s+", "").replaceAll("\\s+(und|bitte)$", "")
+                    .replaceAll("\\s+", " ").trim();
+            if (q.isEmpty()) q = "margherita";
+            result = lookup(q, repl);
+        }
+        if (container != null && result != null && !result.matches(".*\\d[,.]\\d+l.*")
+                && !result.toLowerCase(Locale.GERMAN).contains(container.toLowerCase(Locale.GERMAN))) {
+            result += " " + container;
+        }
+        if (big && result != null && result.contains("0,33l")) result = result.replace("0,33l", "0,5l");
+        if (size != null && result != null) result = applySize(result, size);
+        return result == null ? "" : result;
+    }
 
-        if (result == null && !noPizza.isEmpty()) {
+    private static String applySize(String r, String size) {
+        String pre = size.equals("mini") ? "Mini-Pizza" : "Familienpizza";
+        if (r.startsWith("Pizza ")) return pre + r.substring(5);
+        if (r.startsWith("Wunschpizza"))
+            return (size.equals("mini") ? "Mini-Wunschpizza" : "Familien Wunschpizza") + r.substring(11);
+        if (r.contains(" + ")) return pre + ": " + r;
+        return r;
+    }
+
+    private static String lookup(String p, Map<String, String> repl) {
+        if (repl.containsKey(p)) return repl.get(p);
+        for (String base : BASES) {
+            if (Pattern.compile("\\b" + base + "\\b").matcher(p).find()) {
+                String rest = p.replaceAll("\\b" + base + "\\b", " ").replaceAll("\\b(mit|von)\\b", " ")
+                        .replaceAll("\\s+", " ").trim();
+                if (repl.containsKey(base + " " + rest)) return repl.get(base + " " + rest);
+                if (base.equals("pizza") && repl.containsKey(rest)) return repl.get(rest);
+                if (rest.isEmpty()) return cap(base);
+            }
+        }
+        String noPizza = p.replaceAll("\\bpizz(?:a|en)\\b", " ").replaceAll("\\s+", " ").trim();
+        if (!noPizza.isEmpty()) {
             List<String> tops = new ArrayList<>();
             boolean all = true;
             for (String w : noPizza.split(" ")) {
                 if (w.equals("und") || w.equals("mit") || w.equals("+")) continue;
                 if (!TOPPINGS.contains(w)) { all = false; break; }
-                tops.add(repl.containsKey(w) && w.startsWith("tun") ? repl.get(w) : cap(w));
+                tops.add(w.startsWith("tun") ? "Thunfisch" : cap(w));
             }
-            if (all && tops.size() >= 2) result = String.join(" + ", tops);
+            if (all && tops.size() >= 2) return String.join(" + ", tops);
         }
-
-        if (result == null) {
-            String best = null;
-            for (String k : repl.keySet()) {
-                if (Pattern.compile("\\b" + Pattern.quote(k) + "\\b", CI).matcher(p).find()
-                        && (best == null || k.length() > best.length())) best = k;
+        String best = null;
+        for (String k : repl.keySet()) {
+            if (k.length() >= 3 && Pattern.compile("\\b" + Pattern.quote(k) + "\\b", CI).matcher(p).find()
+                    && (best == null || k.length() > best.length())) best = k;
+        }
+        if (best != null) {
+            String rest = p.replaceFirst("\\b" + Pattern.quote(best) + "\\b", " ")
+                    .replaceAll("\\bpizz(?:a|en)\\b", " ").replaceAll("\\s+", " ").trim();
+            if (rest.isEmpty()) return repl.get(best);
+            List<String> tops = new ArrayList<>();
+            for (String w : rest.split(" ")) {
+                if (w.equals("und") || w.equals("mit")) continue;
+                if (!TOPPINGS.contains(w)) { tops = null; break; }
+                tops.add(w.startsWith("tun") ? "Thunfisch" : cap(w));
             }
-            if (best != null) {
-                String rest = p.replaceFirst("\\b" + Pattern.quote(best) + "\\b", " ")
-                        .replaceAll("\\bpizz(?:a|en)\\b", " ").replaceAll("\\s+", " ").trim();
-                result = repl.get(best) + (rest.isEmpty() ? "" : " " + titleCase(rest));
-            }
+            if (tops != null && !tops.isEmpty()) return repl.get(best) + ": " + String.join(" + ", tops);
+            return repl.get(best) + " " + titleCase(rest);
         }
-        if (result == null) result = titleCase(p);
-        if (container != null && !result.toLowerCase(Locale.GERMAN).contains(container.toLowerCase(Locale.GERMAN))) {
-            result += " " + container;
-        }
-        return result;
+        return titleCase(p);
     }
 
     private static String cleanAddress(Matcher am) {

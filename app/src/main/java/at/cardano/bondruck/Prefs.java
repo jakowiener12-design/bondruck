@@ -16,44 +16,74 @@ final class Prefs {
     static final String REPL = "repl";
     static final String IGNORE = "ignore";
     static final String LABELS = "labels";
-    static final String DEF_LABELS =
-            "Pizza Salami | 9,50 | Tomatensauce, Käse, Salami\n" +
-            "Pizza Mexikaner | 11,00 | Tomatensauce, Käse, Faschiertes, Mais, Pfefferoni, scharf\n" +
-            "Hühner Sandwich | 6,50 | Hühnerfleisch, Salat, Tomaten, Zwiebel, Sauce";
+    static final String HEADER = "header";
+    static final String LOGO_BON = "logoBon";
+    static final String LOGO_LABEL = "logoLabel";
+    static final String HEADER_BON = "headerBon";
+    static final String HEADER_LABEL = "headerLabel";
+    private static final int DEFAULTS_VERSION = 2;
+    private static final java.util.Map<String, String> assets = new java.util.HashMap<>();
 
     static final String DEF_IP = "192.168.68.51";
     static final String DEF_PORT = "9100";
     static final String DEF_WAIT = "120";
-    static final String DEF_REPL =
-            "mexicana = Mexikaner\n" +
-            "mexikana = Mexikaner\n" +
-            "mexikaner = Mexikaner\n" +
-            "margarita = Margherita\n" +
-            "eistee pfirsich = Eistee Pfirsich Dose\n" +
-            "eistee zitrone = Eistee Zitrone Dose\n" +
-            "cola zero = Cola Zero Dose\n" +
-            "cola = Cola Dose\n" +
-            "fanta = Fanta Dose\n" +
-            "sprite = Sprite Dose\n" +
-            "keba = Hühner Sandwich\n" +
-            "kebap = Hühner Sandwich\n" +
-            "kebab = Hühner Sandwich\n" +
-            "döner = Hühner Sandwich\n" +
-            "tunfisch = Thunfisch";
 
     private Prefs() {}
 
     static SharedPreferences get(Context c) {
-        return c.getSharedPreferences("bondruck", Context.MODE_PRIVATE);
+        SharedPreferences sp = c.getSharedPreferences("bondruck", Context.MODE_PRIVATE);
+        if (sp.getInt("defver", 0) < DEFAULTS_VERSION) {
+            // neue Speisekarte übernehmen
+            sp.edit().remove(REPL).remove(LABELS).putInt("defver", DEFAULTS_VERSION).apply();
+        }
+        return sp;
     }
+
+    /** Standardtexte aus assets (Speisekarte, Produktnamen, Firmendaten). */
+    static synchronized String asset(Context c, String name) {
+        String v = assets.get(name);
+        if (v != null) return v;
+        try (java.io.InputStream in = c.getAssets().open(name)) {
+            java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) b.write(buf, 0, n);
+            v = new String(b.toByteArray(), "UTF-8").trim();
+        } catch (Exception e) {
+            v = "";
+        }
+        assets.put(name, v);
+        return v;
+    }
+
+    static byte[] logo(Context c) {
+        try (java.io.InputStream in = c.getAssets().open("logo.bin")) {
+            java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) > 0) b.write(buf, 0, n);
+            return b.toByteArray();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    static String defRepl(Context c) { return asset(c, "produktnamen.txt"); }
+    static String defLabels(Context c) { return asset(c, "etiketten.txt"); }
+    static String defHeader(Context c) { return asset(c, "firmendaten.txt"); }
+    static String header(Context c) { return get(c).getString(HEADER, defHeader(c)); }
+    static boolean logoBon(Context c) { return get(c).getBoolean(LOGO_BON, true); }
+    static boolean logoLabel(Context c) { return get(c).getBoolean(LOGO_LABEL, true); }
+    static boolean headerBon(Context c) { return get(c).getBoolean(HEADER_BON, true); }
+    static boolean headerLabel(Context c) { return get(c).getBoolean(HEADER_LABEL, false); }
 
     static String ip(Context c) { return get(c).getString(IP, DEF_IP).trim(); }
     static int port(Context c) { return num(get(c).getString(PORT, DEF_PORT), 9100); }
     static int size(Context c) { return get(c).getInt(SIZE, 2); }
     static boolean auto(Context c) { return get(c).getBoolean(AUTO, true); }
     static int waitSec(Context c) { return Math.max(15, num(get(c).getString(WAIT, DEF_WAIT), 120)); }
-    static String labels(Context c) { return get(c).getString(LABELS, DEF_LABELS); }
-    static String repl(Context c) { return get(c).getString(REPL, DEF_REPL); }
+    static String labels(Context c) { return get(c).getString(LABELS, defLabels(c)); }
+    static String repl(Context c) { return get(c).getString(REPL, defRepl(c)); }
 
     static Set<String> ignored(Context c) {
         Set<String> s = new HashSet<>();

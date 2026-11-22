@@ -39,7 +39,8 @@ public class MainActivity extends Activity {
     private static final int BG = Color.rgb(242, 242, 242);
     private static final String[] TABS = {"Bestellungen", "Text", "Etiketten", "Einstellungen"};
 
-    private EditText ip, port, wait, repl, ignore, free, labels, copies;
+    private EditText ip, port, wait, repl, ignore, free, labels, copies, header;
+    private Switch logoBon, logoLabel, headerBon, headerLabel;
     private Switch auto;
     private RadioGroup size;
     private Spinner labelPick;
@@ -103,6 +104,13 @@ public class MainActivity extends Activity {
 
     private LinearLayout buildOrders() {
         LinearLayout p = column();
+        android.widget.ImageView logo = new android.widget.ImageView(this);
+        logo.setImageResource(R.drawable.logo);
+        logo.setAdjustViewBounds(true);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(110), dp(110));
+        lp.gravity = Gravity.CENTER_HORIZONTAL;
+        lp.topMargin = dp(12);
+        p.addView(logo, lp);
         LinearLayout c = card(p, "Status");
         status = new TextView(this);
         status.setTextSize(16);
@@ -152,6 +160,8 @@ public class MainActivity extends Activity {
         LinearLayout m = card(p, "Etiketten verwalten");
         hint(m, "Eine Zeile je Etikett: Name | Preis | Beschreibung");
         labels = input(m, null, Prefs.labels(this), InputType.TYPE_CLASS_TEXT, true);
+        labels.setMaxLines(12);
+        labels.setVerticalScrollBarEnabled(true);
         button(m, "Speichern", true, () -> { save(); fillLabels(); toast("Gespeichert"); });
         return p;
     }
@@ -194,9 +204,27 @@ public class MainActivity extends Activity {
         wait = input(a, "Wartezeit ohne neue Nachricht (Sekunden)",
                 sp.getString(Prefs.WAIT, Prefs.DEF_WAIT), InputType.TYPE_CLASS_NUMBER, false);
 
+        LinearLayout fd = card(p, "Logo und Firmendaten");
+        logoBon = sw(fd, "Logo auf Bon", Prefs.logoBon(this));
+        headerBon = sw(fd, "Firmendaten auf Bon", Prefs.headerBon(this));
+        logoLabel = sw(fd, "Logo auf Etiketten", Prefs.logoLabel(this));
+        headerLabel = sw(fd, "Firmendaten auf Etiketten", Prefs.headerLabel(this));
+        label(fd, "Firmendaten (erste zwei Zeilen werden fett gedruckt)");
+        header = input(fd, null, Prefs.header(this), InputType.TYPE_CLASS_TEXT, true);
+        button(fd, "Firmendaten zurücksetzen", false, () -> header.setText(Prefs.defHeader(this)));
+
         LinearLayout pn = card(p, "Produktnamen");
         hint(pn, "Kundentext = Text am Bon, eine Zeile je Eintrag. Beispiel: kebap = Hühner Sandwich");
         repl = input(pn, null, Prefs.repl(this), InputType.TYPE_CLASS_TEXT, true);
+        repl.setMaxLines(12);
+        repl.setVerticalScrollBarEnabled(true);
+        button(pn, "Speisekarte von Webseite wiederherstellen", false, () -> {
+            repl.setText(Prefs.defRepl(this));
+            labels.setText(Prefs.defLabels(this));
+            save();
+            fillLabels();
+            toast("Produktnamen und Etiketten zurückgesetzt");
+        });
 
         LinearLayout ig = card(p, "Ausgenommene Chats");
         hint(ig, "Name oder Nummer wie in WhatsApp, eine je Zeile. Diese Chats werden nie gedruckt.");
@@ -333,6 +361,11 @@ public class MainActivity extends Activity {
                 .putString(Prefs.REPL, repl.getText().toString())
                 .putString(Prefs.IGNORE, ignore.getText().toString())
                 .putString(Prefs.LABELS, labels.getText().toString())
+                .putString(Prefs.HEADER, header.getText().toString())
+                .putBoolean(Prefs.LOGO_BON, logoBon.isChecked())
+                .putBoolean(Prefs.HEADER_BON, headerBon.isChecked())
+                .putBoolean(Prefs.LOGO_LABEL, logoLabel.isChecked())
+                .putBoolean(Prefs.HEADER_LABEL, headerLabel.isChecked())
                 .apply();
     }
 
@@ -406,6 +439,16 @@ public class MainActivity extends Activity {
         l.setPadding(0, 0, dp(8), 0);
         row.addView(l, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, w));
         return l;
+    }
+
+    private Switch sw(LinearLayout parent, String text, boolean on) {
+        Switch s = new Switch(this);
+        s.setText(text);
+        s.setChecked(on);
+        s.setTextSize(16);
+        s.setPadding(0, dp(6), 0, dp(6));
+        parent.addView(s);
+        return s;
     }
 
     private void label(LinearLayout parent, String text) {

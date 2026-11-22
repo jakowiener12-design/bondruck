@@ -6,7 +6,7 @@
 
     <application
         android:label="Bondruck"
-        android:icon="@android:drawable/ic_menu_send"
+        android:icon="@drawable/logo"
         android:allowBackup="true"
         android:theme="@style/AppTheme">
 

@@ -1,0 +1,197 @@
+Pizza Margherita | 10,50 | Pizzakäse
+Pizza Salami | 11,50 | Putensalami
+Pizza Cardinale | 11,50 | Putenschinken
+Pizza Hühnerfleisch | 13,90 | Hühnerdöner
+Pizza Rindfleisch | 14,90 | Rinddöner
+Pizza Funghi | 11,50 | Champignons
+Pizza Toscana | 12,90 | Putenschinken, Champignons
+Pizza Tonno | 12,90 | Thunfisch, rote Zwiebeln
+Pizza Sophia-Loren | 12,90 | Schafskäse, zwei Eier
+Pizza Sucuk | 13,50 | Sucuk (Wurst)
+Pizza Spinaci | 13,00 | Spinat, Schafskäse
+Pizza Rucola | 12,50 | Rucola, Tomaten
+Pizza Bianca | 13,00 | Putensalami, Schafskäse
+Pizza Hawaii | 13,00 | Putenschinken, Ananas
+Pizza Vegetaria | 13,50 | Champignons, Mais, Broccoli, Paprika, rote Zwiebeln
+Pizza Provenciale | 13,50 | Putenschinken, Mais, Rindspeck, milde Pfefferoni
+Pizza Quattro Stagioni | 12,90 | Putenschinken, Champignons, Artischocken
+Pizza Quattro Formaggi | 12,90 | vier verschiedene Käsesorten
+Pizza Melanzani | 12,90 | Melanzani, Paprika
+Pizza Frutti di Mare | 14,50 | Meeresfrüchte
+Pizza Diavolo | 13,50 | Putenschinken, Rindersalami, rote Zwiebeln, scharfe Pfefferoni
+Pizza Mexikaner | 14,50 | Hühnerdöner, Mais, Paprika
+Pizza Calzone | 12,50 | Putenschinken, Champignons
+Pizza Contadino | 13,90 | Rindspeck, rote Zwiebel, Ei
+Pizza Capricciosa | 14,90 | Putenschinken, Champignons, Artischocken, Sardellen, Oliven
+Pizza Rusticana | 14,90 | Putenschinken, Champignons, Artischocken, Oliven, Ei
+Pizza Cardano | 14,90 | Hühnerdöner, Spinat, Paprika, Champignons, Mais
+Wunschpizza | 14,90 | drei Sorten nach Wahl
+Familienpizza Margherita | 21,90 | Pizzakäse
+Familienpizza Salami | 24,50 | Putensalami
+Familienpizza Cardinale | 24,50 | Putenschinken
+Familienpizza Hühnerfleisch | 27,90 | Hühnerdöner
+Familienpizza Rindfleisch | 28,90 | Rinddöner
+Familienpizza Funghi | 24,50 | Champignons
+Familienpizza Toscana | 25,90 | Putenschinken, Champignons
+Familienpizza Tonno | 25,90 | Thunfisch, rote Zwiebeln
+Familienpizza Sophia-Loren | 26,90 | Schafskäse, zwei Eier
+Familienpizza Sucuk | 25,90 | Sucuk (Wurst)
+Familienpizza Spinaci | 25,90 | Spinat, Schafskäse
+Familienpizza Rucola | 25,90 | Rucola, Tomaten
+Familienpizza Bianca | 27,90 | Putensalami, Schafskäse
+Familienpizza Hawaii | 25,90 | Putenschinken, Ananas
+Familienpizza Vegetaria | 25,00 | Champignons, Mais, Broccoli, Paprika, rote Zwiebeln
+Familienpizza Provenciale | 27,90 | Putenschinken, Rindspeck, Mais, milde Pfefferoni
+Familienpizza Quattro Staggione | 27,90 | Putenschinken, Champignons, Artischocken
+Familienpizza Quattro Formaggi | 25,90 | vier verschiedene Käsesorten
+Familienpizza Melanzani | 24,00 | Melanzani, Paprika
+Familienpizza Frutti di Mare | 28,00 | Meeresfrüchte
+Familienpizza Diavolo | 27,90 | Putenschinken, Rindersalami, rote Zwiebeln, scharfe Pfefferoni
+Familienpizza Mexikaner | 29,50 | Hühnerdöner, Mais, Paprika
+Familienpizza Contadino | 28,90 | Rindspeck, rote Zwiebel, Ei
+Familienpizza Capricciosa | 27,90 | Putenschinken, Champignons, Artischocken, Sardellen, Oliven
+Familienpizza Rusticana | 27,90 | Putenschinken, Champignons, Artischocken, Oliven, Ei
+Familien Cardanopizza | 29,50 | Hühnerdöner, Spinat, Paprika, Champignons, Mais
+Familien Wunschpizza | 29,50 | drei Sorten nach Wahl
+Mini-Pizza Margherita | 5,90 | Pizzakäse
+Mini-Pizza Salami | 6,90 | Putensalami
+Mini-Pizza Cardinale | 6,90 | Putenschinken
+Mini-Pizza Hühnerfleisch | 7,90 | Hühnerdöner
+Mini-Pizza Rindfleisch | 7,90 | Rinddöner
+Mini-Pizza Rucola | 7,90 | Rucola, Tomaten
+Mini-Pizza Funghi | 6,90 | Champignons
+Mini-Pizza Toscana | 7,90 | Putenschinken, Champignons
+Mini-Pizza Sucuk | 6,90 | Sucuk (Wurst)
+Mini-Pizza Tonno | 7,90 | Thunfisch, rote Zwiebeln
+Mini-Pizza Contadino | 8,90 | Rindspeck, rote Zwiebel, Ei
+Mini-Pizza Spinaci | 7,90 | Spinat, Schafskäse
+Mini-Pizza Hawaii | 7,90 | Putenschinken, Ananas
+Mini-Pizza Vegetaria | 7,90 | Champignons, Mais, Broccoli, Paprika, rote Zwiebeln
+Mini-Pizza Provenciale | 8,90 | Putenschinken, Rindspeck, Mais, milde Pfefferoni
+Mini-Pizza Quattro Formaggi | 7,90 | vier verschiedene Käsesorten
+Mini-Pizza Quattro Staggione | 7,90 | Putenschinken, Champignons, Artischocken
+Mini-Pizza Melanzani | 7,90 | Melanzani, Paprika
+Mini-Pizza Frutti di Mare | 8,90 | Meeresfrüchte
+Mini-Pizza Diavolo | 8,90 | Putenschinken, Rindersalami, rote Zwiebeln, scharfe Pfefferoni
+Mini-Pizza Mexikaner | 8,90 | Hühnerdöner, Mais, Paprika
+Mini-Pizza Capricciosa | 8,90 | Putenschinken, Champignons, Artischocken, Sardellen, Oliven
+Mini-Pizza Rusticana | 8,90 | Putenschinken, Champignons, Artischocken, Oliven, Ei
+Mini-Wunschpizza | 8,90 | drei Sorten nach Wahl
+American-Style-Pizza Florida | 19,90 | Putenschinken, Champignons, Mais, milde Pfefferoni
+American-Style-Pizza Chicago | 19,90 | Putensalami, Rindspeck, rote Zwiebeln
+American-Style-Pizza Los Angeles | 19,90 | Putensalami, rote Zwiebel, scharfer Pfefferoni
+American-Style-Pizza San Francisco | 19,90 | Putenschinken, Rindspeck, Champignons, rote Zwiebel, scharfer Pfefferoni
+American-Style-Pizza New York | 19,90 | Putenschinken, Rindspeck, Mais, milde Pfefferoni
+American-Style-Pizza Miami | 19,90 | drei Zutaten nach Wahl
+Hühner-Sandwich Menü | 13,90 | Hühnerdöner, Salat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Hühner-Dürüm Menü | 14,50 | Hühnerdöner, Salat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Rind-Sandwich Menü | 14,90 | Rinddöner, Salat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Rind-Dürüm Menü | 15,50 | Rinddöner, Salat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Schnitzel Sandwich Menü | 14,90 | Hühnerschnitzel, Salat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Schnitzel Dürüm Menü | 15,50 | Hühnerschnitzel, Salat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Falafel Sandwich Menü | 13,90 | Falafel, Salat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Falafel Dürüm Menü | 14,50 | Falafel, Salat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Vegetarisches Sandwich Menü | 13,90 | Salat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Vegetarisches Dürüm Menü | 14,50 | Salat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Hühner-Sandwich | 6,90 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Hühner-Dürüm | 7,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Hühner-Bowl | 7,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Hühner-Teller-Bowl | 14,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Rind-Sandwich | 7,90 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Rind-Dürüm | 8,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Rind-Bowl | 8,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Rind-Teller-Bowl | 17,90 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Mix-Sandwich | 8,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Mix-Dürüm | 9,00 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Mix-Bowl | 9,00 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Mix-Teller-Bowl | 18,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Pide mit Schafskäse, Gouda, Mozzarella | 12,90 | Schafskäse, Gouda, Mozzarella
+Pide mit Wurst (Sucuk) | 13,90 | Sucuk (Wurst)
+Pide mit Spinat | 13,90 | Spinat
+Pide mit Faschiertem Rindfleisch | 14,90 | Faschiertes Rindfleisch
+Pide mit Rinddöner | 14,90 | Rinddöner
+Baguette-Pide mit Käse | 12,90 | Schafskäse, Gouda, Mozzarella
+Baguette-Pide mit Spinat | 13,90 | Spinat, Weichkäse
+Baguette-Pide mit Rinddöner | 14,90 | Rinddöner
+Baguette-Pide mit Hühnerdöner | 13,90 | Hühnerdöner
+Baguette-Pide mit Sucuk | 13,90 | Sucuk
+Schnitzel Sandwich | 7,90 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Schnitzel Dürüm | 8,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Schnitzel Bowl | 8,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Schnitzel Teller-Bowl | 17,90 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Mildsauce
+Hühnerdöner-Burger Menü | 14,50
+Rinddöner-Burger Menü | 15,50
+XL-Burger Menü | 19,90 | 180 g Rindfleisch, Eisbergsalat, Tomaten, Gewürzgurken, rote Zwiebeln, Hamburgersauce
+XXL-Burger Menü | 23,90 | 180 g Rindfleisch, Eisbergsalat, Tomaten, Gewürzgurken, rote Zwiebeln, Hamburgersauce
+Cheeseburger Menü | 20,90 | 180 g Rindfleisch, Eisbergsalat, Tomaten, Gewürzgurken, rote Zwiebeln, Hamburgersauce
+Chicken-Burger Menü | 17,90 | Hühnerfilet, Eisbergsalat, Essiggurken, rote Zwiebeln, Tomaten, Hamburgersauce
+Veggie-Burger Menü | 17,90 | Vegetarischer Burger, Eisbergsalat, Tomaten, rote Zwiebeln, Essiggurken, Hamburgersauce
+Hühnerdöner-Burger | 7,50
+Rinddöner-Burger | 7,50
+XL-Burger | 13,00 | 180 g Rindfleisch, Eisbergsalat, Tomaten, Gewürzgurken, rote Zwiebeln, Hamburgersauce
+XXL-Burger | 16,00 | 180 g Rindfleisch, Eisbergsalat, Tomaten, Gewürzgurken, rote Zwiebeln, Hamburgersauce
+Cheeseburger | 14,00 | 180 g Rindfleisch, Eisbergsalat, Tomaten, Gewürzgurken, rote Zwiebeln, Hamburgersauce
+Chicken-Burger | 11,00 | Hühnerfilet, Eisbergsalat, Essiggurken, rote Zwiebeln, Tomaten, Hamburgersauce
+Veggie-Burger | 10,00 | Vegetarischer Burger, Eisbergsalat, Tomaten, rote Zwiebeln, Essiggurken, Hamburgersauce
+Vegetarisches Sandwich | 6,90 | Schafskäse, Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Cocktailsauce, Mildsauce
+Vegetarisches Dürüm | 7,50 | Schafskäse, Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Cocktailsauce, Mildsauce
+Vegetarisches Bowl | 7,50 | Schafskäse, Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Cocktailsauce, Mildsauce
+Falafel Sandwich | 6,90 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Cocktailsauce, Mildsauce, Humus
+Falafel Dürüm | 7,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Cocktailsauce, Mildsauce, Humus
+Falafel Bowl | 7,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Cocktailsauce, Mildsauce, Humus
+Falafel Bowl-Teller | 14,50 | Eisbergsalat, Gurken, Tomaten, rote Zwiebeln, Rotkraut, Cocktailsauce, Mildsauce, Humus
+Milde Sauce | 0,80
+Cocktail Sauce | 0,80
+Ketchup | 0,80
+Mayonnaise | 0,80
+Sriracha-Sauce | 0,80
+Scharfe Sauce | 0,80
+Tabasco Sauce | 0,80
+Gemischter Salat Klein (500 Ml) | 7,50 | Eisbergsalat, Schafskäse, rote Zwiebel, Tomaten, Gurken, Mais
+Gemischter Salat Groß (1000 Ml) | 9,50 | Eisbergsalat, Schafskäse, rote Zwiebel, Tomaten, Gurken, Mais
+Tomatensalat | 5,50 | Eisbergsalat, Tomaten, rote Zwiebeln, Oliven
+Thunfischsalat | 8,50 | Thunfisch, Eisbergsalat, rote Zwiebeln, Oliven, Mais
+Reis | 4,50 | Hausgemachter Reis
+Pommes | 4,50 | Gewürzte Pommes
+Hausgemachtes Lavash Brot | 1,00 | Hausgemachtes Brot
+Hausgemachtes Sandwich Brot | 1,00 | Hausgemachtes Brot
+Pizza Stangerl 5 Stk. | 4,50
+Chicken Nuggets 8 Stk. | 8,50 | Chicken Nuggets mit Pommes frites
+Chicken Nuggets 12 Stk. | 12,90 | Chicken Nuggets mit Pommes frites
+Chicken Wings 6 Stk. | 9,50 | Hähnchenflügel mit Pommes frites
+Chicken Wings 9 Stk. | 13,90 | Hähnchenflügel mit Pommes frites
+Trilece | 5,50
+Muhallebi | 5,50
+Lotuskuchen | 5,50
+Sütlac Milchreis | 5,50
+Tiramisu | 5,50
+Soguk Baklava mit Pistazien | 2,00 | Milch, Schokolade
+Baklava mit Pistazien | 2,00 | Pistazien
+Schokobaklava mit Pistazien | 2,00 | Pistazien
+Baklava mit Walnüssen | 1,50 | Walnüsse
+Ayran 0,25l | 2,00
+Red Bull 0,25l | 3,75
+Red Bull Sugarfree 0,25l | 3,75
+Coca Cola 0,33l | 2,75
+Coca Cola 0,5l | 3,25
+Coca Cola Zero 0,33l | 2,75
+Coca Cola Zero 0,5l | 3,25
+Fanta Orange 0,33l | 2,75
+Fanta Orange 0,5l | 3,25
+Sprite 0,33l | 2,75
+Sprite 0,5l | 3,25
+Almdudler 0,33l | 2,75
+Almdudler 0,5l | 3,25
+Powerade Mountain Blast 0,5l | 3,75
+Fuze Tea Zitrone 0,5l | 3,25
+Stillwasser 0,5l | 2,50
+Römerquelle Still 0,5l | 2,75
+Römerquelle Prickelnd 0,5l | 2,75
+Bravo Multivitamin 0,33l | 2,75
+Bravo Multivitamin 0,5l | 3,25
+Uludag Gazoz 0,33l | 2,50
+Uludag Gazoz 0,5l | 3,00
+Rauch Eistee Pfirsich 0,33l | 2,75
+Rauch Eistee Pfirsich 0,5l | 3,25
+Rauch Eistee Zitrone 0,33l | 2,75
+Rauch Eistee Zitrone 0,5l | 3,25
