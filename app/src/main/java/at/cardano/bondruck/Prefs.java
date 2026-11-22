@@ -15,6 +15,11 @@ final class Prefs {
     static final String WAIT = "wait";       // Sekunden Ruhe bis Autodruck
     static final String REPL = "repl";
     static final String IGNORE = "ignore";
+    static final String LABELS = "labels";
+    static final String DEF_LABELS =
+            "Pizza Salami | 9,50 | Tomatensauce, Käse, Salami\n" +
+            "Pizza Mexikaner | 11,00 | Tomatensauce, Käse, Faschiertes, Mais, Pfefferoni, scharf\n" +
+            "Hühner Sandwich | 6,50 | Hühnerfleisch, Salat, Tomaten, Zwiebel, Sauce";
 
     static final String DEF_IP = "192.168.68.51";
     static final String DEF_PORT = "9100";
@@ -47,6 +52,7 @@ final class Prefs {
     static int size(Context c) { return get(c).getInt(SIZE, 2); }
     static boolean auto(Context c) { return get(c).getBoolean(AUTO, true); }
     static int waitSec(Context c) { return Math.max(15, num(get(c).getString(WAIT, DEF_WAIT), 120)); }
+    static String labels(Context c) { return get(c).getString(LABELS, DEF_LABELS); }
     static String repl(Context c) { return get(c).getString(REPL, DEF_REPL); }
 
     static Set<String> ignored(Context c) {

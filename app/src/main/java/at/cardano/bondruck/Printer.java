@@ -81,6 +81,68 @@ final class Printer {
         }).start();
     }
 
+    /** Etikett mit festem Raster: Name (2 Zeilen), Beschreibung (3 Zeilen), Preis. */
+    static void printLabel(Context ctx, String name, String price, String desc, int copies) {
+        final Context app = ctx.getApplicationContext();
+        new Thread(() -> {
+            try {
+                ByteArrayOutputStream b = new ByteArrayOutputStream();
+                b.write(new byte[]{0x1B, 0x40, 0x1C, 0x2E, 0x1B, 0x74, 16});
+                for (int c = 0; c < Math.max(1, copies); c++) {
+                    b.write(new byte[]{0x1B, 0x61, 0x01});             // zentriert
+                    // Name: doppelt hoch und breit, 24 Zeichen je Zeile, 2 Zeilen fix
+                    b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01});
+                    for (String l : fixLines(name, 24, 2)) txt(b, l + "\n");
+                    b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
+                    txt(b, "\n");
+                    // Beschreibung: normal, 48 Zeichen je Zeile, 3 Zeilen fix
+                    for (String l : fixLines(desc, 48, 3)) txt(b, l + "\n");
+                    txt(b, "\n");
+                    // Preis: doppelt hoch und breit, fett
+                    b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01});
+                    String pr = price.trim();
+                    if (!pr.isEmpty() && !pr.contains("€")) pr = "€ " + pr;
+                    txt(b, pr + "\n");
+                    b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
+                    b.write(new byte[]{0x1B, 0x61, 0x00});
+                    b.write(new byte[]{0x1B, 0x64, 0x03, 0x1D, 0x56, 0x42, 0x00});
+                }
+                send(Prefs.ip(app), Prefs.port(app), b.toByteArray());
+                toast(app, "Etikett gedruckt");
+            } catch (Exception e) {
+                toast(app, "Druck fehlgeschlagen: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    /** Text auf genau n Zeilen umbrechen (auffüllen oder abschneiden), damit die Position fix bleibt. */
+    static List<String> fixLines(String text, int width, int n) {
+        List<String> out = new ArrayList<>();
+        StringBuilder cur = new StringBuilder();
+        for (String w : (text == null ? "" : text.trim()).split("\\s+")) {
+            if (w.isEmpty()) continue;
+            while (w.length() > width) {
+                if (cur.length() > 0) { out.add(cur.toString()); cur.setLength(0); }
+                out.add(w.substring(0, width));
+                w = w.substring(width);
+            }
+            if (cur.length() > 0 && cur.length() + 1 + w.length() > width) {
+                out.add(cur.toString());
+                cur.setLength(0);
+            }
+            if (cur.length() > 0) cur.append(' ');
+            cur.append(w);
+        }
+        if (cur.length() > 0) out.add(cur.toString());
+        if (out.size() > n) {
+            out = new ArrayList<>(out.subList(0, n));
+            String last = out.get(n - 1);
+            out.set(n - 1, (last.length() > width - 3 ? last.substring(0, width - 3) : last) + "...");
+        }
+        while (out.size() < n) out.add("");
+        return out;
+    }
+
     /** Testbon mit Beispielbestellung. */
     static void printTest(Context ctx) {
         final Context app = ctx.getApplicationContext();

@@ -23,7 +23,8 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
-    private EditText ip, port, wait, repl, ignore, free;
+    private EditText ip, port, wait, repl, ignore, free, labels, copies;
+    private android.widget.Spinner labelPick;
     private Switch auto;
     private RadioGroup size;
     private TextView status;
@@ -62,6 +63,19 @@ public class MainActivity extends Activity {
         });
         button(ll, "Text löschen", () -> free.setText(""));
 
+        // Etiketten
+        label(ll, "Etikett auswählen");
+        labelPick = new android.widget.Spinner(this);
+        ll.addView(labelPick);
+        copies = field(ll, "Anzahl", "1", InputType.TYPE_CLASS_NUMBER, false);
+        button(ll, "Etikett drucken", () -> {
+            String[] e = selectedLabel();
+            if (e == null) { Toast.makeText(this, "Kein Etikett", Toast.LENGTH_SHORT).show(); return; }
+            int n;
+            try { n = Integer.parseInt(copies.getText().toString().trim()); } catch (Exception ex) { n = 1; }
+            Printer.printLabel(this, e[0], e[1], e[2], Math.min(n, 50));
+        });
+
         button(ll, "1. Benachrichtigungszugriff erlauben", () ->
                 startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
         button(ll, "2. Akku Optimierung ausschalten", () ->
@@ -95,8 +109,12 @@ public class MainActivity extends Activity {
         ignore = field(ll, "Chats nie verarbeiten (Name oder Nummer wie in WhatsApp, eine je Zeile)",
                 p.getString(Prefs.IGNORE, ""), InputType.TYPE_CLASS_TEXT, true);
 
+        labels = field(ll, "Etiketten (Name | Preis | Beschreibung, eine Zeile je Etikett)",
+                Prefs.labels(this), InputType.TYPE_CLASS_TEXT, true);
+
         button(ll, "Speichern", () -> {
             save();
+            fillLabels();
             Toast.makeText(this, "Gespeichert", Toast.LENGTH_SHORT).show();
         });
         button(ll, "Testdruck", () -> { save(); Printer.printTest(this); });
@@ -105,6 +123,7 @@ public class MainActivity extends Activity {
         sv.addView(ll);
         setContentView(sv);
 
+        fillLabels();
         takeShared(getIntent());
 
         if (Build.VERSION.SDK_INT >= 33
@@ -117,6 +136,30 @@ public class MainActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         takeShared(intent);
+    }
+
+    private java.util.List<String[]> labelList() {
+        java.util.List<String[]> out = new java.util.ArrayList<>();
+        for (String line : labels.getText().toString().split("\n")) {
+            String[] p = line.split("\\|", -1);
+            if (p.length < 2 || p[0].trim().isEmpty()) continue;
+            out.add(new String[]{p[0].trim(), p[1].trim(), p.length > 2 ? p[2].trim() : ""});
+        }
+        return out;
+    }
+
+    private void fillLabels() {
+        java.util.List<String> names = new java.util.ArrayList<>();
+        for (String[] e : labelList()) names.add(e[0] + "  (" + e[1] + ")");
+        android.widget.ArrayAdapter<String> a = new android.widget.ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item, names);
+        labelPick.setAdapter(a);
+    }
+
+    private String[] selectedLabel() {
+        java.util.List<String[]> l = labelList();
+        int i = labelPick.getSelectedItemPosition();
+        return i >= 0 && i < l.size() ? l.get(i) : null;
     }
 
     /** Text, der über "Teilen" an Bondruck geschickt wurde, ins Textfeld übernehmen. */
@@ -156,6 +199,7 @@ public class MainActivity extends Activity {
                 .putString(Prefs.WAIT, wait.getText().toString().trim())
                 .putString(Prefs.REPL, repl.getText().toString())
                 .putString(Prefs.IGNORE, ignore.getText().toString())
+                .putString(Prefs.LABELS, labels.getText().toString())
                 .apply();
     }
 
