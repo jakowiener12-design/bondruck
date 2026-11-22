@@ -211,8 +211,9 @@ final class Parser {
                     .replaceAll("(?i)[\\s,;.!]+(bitte|danke|und|oder|ve|veya|lütfen|lutfen)?[\\s,;.!]*$", "").trim();
             if (seg.isEmpty()) continue;
             // "1x ohne zwiebel", "einer nur sauce": Hinweis für einen Teil des vorigen Artikels
-            String segN = seg.replaceAll("(?i)^(tanesi|tanesine|tanesinde|davon|bitte|biri|birinde)\\s+", "");
-            if (!r.items.isEmpty() && segN.matches("(?is)^(ohne|nur|mit|extra|dazu|bitte|scharf|mild|halbiert|kein|keine|soğansız|sogansiz|acılı|acili|acısız|acisiz|sadece|salatasız|salatasiz|sossuz|bol|az|ekstra|domatessiz)(?![\\p{L}]).*")) {
+            String segN = seg.replaceAll("(?i)^(tanesi|tanesine|tanesinde|davon|bitte|biri|birinde)\\s+", "")
+                    .replaceAll("(?i)^(o\\.?|oh|ohn|ohen|ohe|0)\\s+", "ohne ");
+            if (!r.items.isEmpty() && segN.matches("(?is)^(ohne|nur|mit|extra|dazu|bitte|scharf|mild|halbiert|kein|keine|alles|allem|komplett|normal|standard|klassisch|wenig|viel|soğansız|sogansiz|acılı|acili|acısız|acisiz|sadece|salatasız|salatasiz|sossuz|bol|az|ekstra|domatessiz|her ?şey|hersey)(?![\\p{L}]).*")) {
                 String t = segN.replaceAll("[,;.!]+$", "").trim();
                 r.items.get(r.items.size() - 1).notes.add(qtys.get(i) + "x " + cap(translate(t)));
                 continue;
@@ -418,7 +419,12 @@ final class Parser {
             {"acı sos", "scharfe Sauce"}, {"sos", "Sauce"}, {"ekstra", "extra"}, {"ikiye bölün", "halbieren"}, {"ikiye böl", "halbieren"},
             {"ikiye kesin", "halbieren"}, {"ikiye kes", "halbieren"}, {"ortadan kesin", "halbieren"}, {"ortadan kes", "halbieren"},
             {"ayrı", "separat"}, {"ayri", "separat"}, {"bol", "viel"}, {"az", "wenig"}, {"lütfen", ""}, {"lutfen", ""},
-            {"salt", "Salat"}, {"zwiebl", "Zwiebel"}, {"zwibel", "Zwiebel"}, {"sose", "Sauce"}, {"soße", "Sauce"}, {"sosse", "Sauce"}};
+            {"salt", "Salat"}, {"zwiebl", "Zwiebel"}, {"zwibel", "Zwiebel"}, {"zwiebl", "Zwiebel"}, {"zwiebeln", "Zwiebel"},
+            {"sose", "Sauce"}, {"soße", "Sauce"}, {"sosse", "Sauce"}, {"souce", "Sauce"}, {"sauße", "Sauce"}, {"soss", "Sauce"},
+            {"sous", "Sauce"}, {"souse", "Sauce"}, {"saucen", "Sauce"}, {"sossen", "Sauce"}, {"soßen", "Sauce"},
+            {"knofl", "Knoblauch"}, {"knofel", "Knoblauch"}, {"tomate", "Tomaten"}, {"tomaten", "Tomaten"},
+            {"kraut", "Rotkraut"}, {"rotkraut", "Rotkraut"}, {"gurke", "Gurken"}, {"salat", "Salat"},
+            {"alles", "mit allem"}, {"allem", "allem"}, {"herşey", "mit allem"}, {"her şey", "mit allem"}, {"hersey", "mit allem"}};
 
     /** Türkische und falsch geschriebene Sonderwünsche auf Deutsch. */
     static String translate(String t) {
