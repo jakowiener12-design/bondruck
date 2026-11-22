@@ -127,7 +127,9 @@ final class Parser {
         addHint(line.substring(0, first), r);
         for (int i = 0; i < spans.size(); i++) {
             int end = i + 1 < spans.size() ? spans.get(i + 1)[0] : line.length();
-            String seg = line.substring(spans.get(i)[1], end).replaceAll("(?i)[\\s,;.!]+(bitte|danke|und|oder)?[\\s,;.!]*$", "").trim();
+            String seg = line.substring(spans.get(i)[1], end)
+                    .replaceAll("(?i)(\\s+(lieferung|liefern|abholung|abholen|adresse|lieferadresse|an|die|der|nach|zur|zu|bitte|um|für|fuer))+[\\s,;.!:]*$", "")
+                    .replaceAll("(?i)[\\s,;.!]+(bitte|danke|und|oder)?[\\s,;.!]*$", "").trim();
             if (seg.isEmpty()) continue;
             Item it = new Item();
             it.qty = qtys.get(i);

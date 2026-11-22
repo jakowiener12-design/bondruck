@@ -53,10 +53,12 @@ final class Printer {
                                 Prefs.logoBon(app) ? Prefs.logo(app) : null,
                                 Prefs.headerBon(app) ? Prefs.header(app) : null));
                 OrderStore.markPrinted(app, chat);
+                OrderStore.log(chat + ": gedruckt");
                 Notifier.update(app, chat);
                 if (manual) toast(app, "Gedruckt");
             } catch (Exception e) {
                 Log.e(TAG, "Druck fehlgeschlagen", e);
+                OrderStore.log(chat + ": DRUCKFEHLER " + e.getMessage());
                 toast(app, "Druck fehlgeschlagen: " + e.getMessage());
                 Notifier.error(app, chat, e.getMessage());
             }

@@ -45,7 +45,7 @@ public class MainActivity extends Activity {
     private RadioGroup size, labelStyle;
     private Spinner labelPick;
     private TextView status;
-    private LinearLayout orderList;
+    private LinearLayout orderList, logList;
 
     private final List<TextView> tabViews = new ArrayList<>();
     private final List<View> pages = new ArrayList<>();
@@ -120,6 +120,12 @@ public class MainActivity extends Activity {
         orderList = new LinearLayout(this);
         orderList.setOrientation(LinearLayout.VERTICAL);
         o.addView(orderList);
+
+        LinearLayout lg = card(p, "Protokoll");
+        logList = new LinearLayout(this);
+        logList.setOrientation(LinearLayout.VERTICAL);
+        lg.addView(logList);
+        button(lg, "Aktualisieren", false, this::refreshOrders);
         return p;
     }
 
@@ -257,6 +263,16 @@ public class MainActivity extends Activity {
 
     private void refreshOrders() {
         if (orderList == null) return;
+        logList.removeAllViews();
+        List<String> lines = OrderStore.getLog();
+        if (lines.isEmpty()) hint(logList, "Noch keine Ereignisse. Kommt hier bei einer neuen WhatsApp Nachricht nichts, fehlt der Benachrichtigungszugriff.");
+        for (String l : lines) {
+            TextView t = new TextView(this);
+            t.setText(l);
+            t.setTextSize(13);
+            t.setTypeface(Typeface.MONOSPACE);
+            logList.addView(t);
+        }
         orderList.removeAllViews();
         List<OrderStore.Order> list = OrderStore.list(this);
         if (list.isEmpty()) {
@@ -348,6 +364,12 @@ public class MainActivity extends Activity {
         super.onResume();
         String list = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
         boolean ok = list != null && list.contains(getPackageName());
+        if (ok) {
+            try {
+                android.service.notification.NotificationListenerService.requestRebind(
+                        new android.content.ComponentName(this, WhatsAppListener.class));
+            } catch (Exception ignored) { }
+        }
         status.setText(ok ? "Aktiv: WhatsApp wird mitgelesen"
                           : "Benachrichtigungszugriff fehlt\nEinstellungen > Berechtigungen");
         status.setTextColor(ok ? Color.rgb(0, 130, 0) : Color.rgb(200, 0, 0));

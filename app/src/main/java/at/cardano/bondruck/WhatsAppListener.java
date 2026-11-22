@@ -36,9 +36,18 @@ public class WhatsAppListener extends NotificationListenerService {
 
     @Override
     public void onListenerConnected() {
+        OrderStore.log("Verbunden mit Benachrichtigungen");
         try {
             StatusBarNotification[] active = getActiveNotifications();
             if (active != null) for (StatusBarNotification sbn : active) process(sbn, false);
+        } catch (Exception ignored) { }
+    }
+
+    @Override
+    public void onListenerDisconnected() {
+        OrderStore.log("Verbindung getrennt, verbinde neu");
+        try {
+            requestRebind(new android.content.ComponentName(this, WhatsAppListener.class));
         } catch (Exception ignored) { }
     }
 
@@ -53,13 +62,19 @@ public class WhatsAppListener extends NotificationListenerService {
         if (n == null || (n.flags & Notification.FLAG_GROUP_SUMMARY) != 0) return;
         Bundle ex = n.extras;
         if (ex == null) return;
-        if (ex.getBoolean(Notification.EXTRA_IS_GROUP_CONVERSATION, false)) return; // Gruppen ignorieren
+        if (ex.getBoolean(Notification.EXTRA_IS_GROUP_CONVERSATION, false)) {
+            if (live) OrderStore.log("Gruppenchat ignoriert");
+            return;
+        }
 
         String chat = str(ex.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE));
         if (chat.isEmpty()) chat = str(ex.getCharSequence(Notification.EXTRA_TITLE));
         chat = chat.replace("‪", "").replace("‬", "").trim();
         if (chat.isEmpty() || chat.equalsIgnoreCase("WhatsApp")) return;
-        if (Prefs.ignored(this).contains(chat.toLowerCase(Locale.GERMAN))) return;
+        if (Prefs.ignored(this).contains(chat.toLowerCase(Locale.GERMAN))) {
+            if (live) OrderStore.log(chat + ": ausgenommener Chat");
+            return;
+        }
 
         Parcelable[] msgs = ex.getParcelableArray(Notification.EXTRA_MESSAGES);
         if (msgs != null && msgs.length > 0) {
@@ -85,9 +100,13 @@ public class WhatsAppListener extends NotificationListenerService {
         // Medien ohne Text überspringen
         if (text.matches("(?i)^(📷|🎤|🎥|📄)?\\s*(foto|bild|sprachnachricht|video|sticker|gif|dokument|standort|kontakt)\\s*$")) return;
 
-        OrderStore.add(this, chat, text, time);
+        OrderStore.Order o = OrderStore.add(this, chat, text, time);
+        OrderStore.log(chat + ": \"" + (text.length() > 40 ? text.substring(0, 40) + "…" : text) + "\"");
         Notifier.update(this, chat);
-        if (Prefs.auto(this)) schedule(chat);
+        if (Prefs.auto(this) && o.printedAt == 0) {
+            schedule(chat);
+            OrderStore.log(chat + ": Autodruck in " + Prefs.waitSec(this) + " s geprüft");
+        }
     }
 
     private void schedule(String chat) {
@@ -100,7 +119,13 @@ public class WhatsAppListener extends NotificationListenerService {
             Parser.Result res = Parser.parse(o.msgs, Parser.replacements(Prefs.repl(app)));
             boolean hasAddress = res.address != null || "ABHOLUNG".equals(res.type)
                     || OrderStore.knownAddress(app, chat) != null;
-            if (!res.items.isEmpty() && hasAddress) Printer.printOrder(app, chat, false);
+            if (!res.items.isEmpty() && hasAddress) {
+                OrderStore.log(chat + ": wird automatisch gedruckt");
+                Printer.printOrder(app, chat, false);
+            } else {
+                OrderStore.log(chat + ": nicht gedruckt (" + (res.items.isEmpty() ? "keine Artikel" : "keine Adresse")
+                        + "), bitte Drucken tippen");
+            }
         };
         timers.put(chat, r);
         handler.postDelayed(r, Prefs.waitSec(app) * 1000L);

@@ -29,13 +29,25 @@ final class OrderStore {
     private static final Map<String, Order> orders = new HashMap<>();
     private static final Map<String, String> addresses = new HashMap<>();
     private static boolean loaded;
+    private static final List<String> log = new ArrayList<>();
+
+    /** Protokoll der letzten Ereignisse (nur im Speicher). */
+    static synchronized void log(String line) {
+        String t = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.GERMAN).format(new java.util.Date());
+        log.add(0, t + "  " + line);
+        while (log.size() > 40) log.remove(log.size() - 1);
+    }
+
+    static synchronized List<String> getLog() { return new ArrayList<>(log); }
 
     private OrderStore() {}
 
     static synchronized Order add(Context c, String chat, String text, long time) {
         load(c);
         Order o = orders.get(chat);
-        if (o == null || time - o.last > ORDER_GAP_MS) {
+        boolean startNew = o == null || time - o.last > ORDER_GAP_MS;
+        if (!startNew && o.printedAt > 0 && hasItems(c, text)) startNew = true;   // neue Bestellung nach Druck
+        if (startNew) {
             o = new Order();
             o.chat = chat;
             o.first = time;
@@ -46,6 +58,12 @@ final class OrderStore {
         o.last = Math.max(o.last, time);
         save(c);
         return o;
+    }
+
+    private static boolean hasItems(Context c, String text) {
+        List<String> one = new ArrayList<>();
+        one.add(text);
+        return !Parser.parse(one, Parser.replacements(Prefs.repl(c))).items.isEmpty();
     }
 
     static synchronized Order get(Context c, String chat) {
