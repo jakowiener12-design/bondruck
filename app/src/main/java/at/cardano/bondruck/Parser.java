@@ -124,8 +124,9 @@ final class Parser {
 
     static Result parse(List<String> messages, Map<String, String> repl) {
         Result r = new Result();
-        for (String raw : messages) {
-            if (raw == null) continue;
+        for (String raw0 : messages) {
+            if (raw0 == null) continue;
+            String raw = cart(raw0);
             String msg = Phone.remove(raw).replace('\r', ' ')
                     .replaceAll("(?i)\\b(tel|telefon|telefonnummer|handy|handynummer|nummer|nr)\\b\\.?:?", " ");
             String low = msg.toLowerCase(Locale.GERMAN);
@@ -190,6 +191,63 @@ final class Parser {
         }
         if (r.address != null && r.type == null) r.type = "LIEFERUNG";
         return r;
+    }
+
+    private static final Pattern CART_PRICE = Pattern.compile(
+            "(?:€\\s*)?-?\\d{1,3}[,.]\\d{2}\\s*(?:€|eur|euro)?\\s*$", CI);
+    private static final Pattern CART_SKIP = Pattern.compile(
+            "^(zwischensumme|summe|gesamt|gesamtsumme|total|subtotal|liefergebühr|liefergebuehr|lieferkosten|servicegebühr|servicegebuehr|"
+                    + "service|trinkgeld|rabatt|gutschein|mwst|ust|inkl|exkl|zur kasse|kasse|bezahlen|warenkorb|deine bestellung|ihre bestellung|"
+                    + "bestellübersicht|bestelluebersicht|mindestbestellwert|verpackung|pfand gesamt|artikel|menge|preis|anzahl|bearbeiten|entfernen|"
+                    + "hinzufügen|weiter|jetzt bestellen|bestellen|lieferzeit|abholzeit|zahlungsart|barzahlung|kartenzahlung|paypal)\\b.*", CI);
+    private static final Pattern CART_QTY_END = Pattern.compile("^(.*\\p{L}.*?)\\s*[x×]\\s*(\\d{1,2})$", CI);
+    private static final Pattern CART_QTY_LINE = Pattern.compile("^(?:[x×]\\s*)?(\\d{1,2})(?:\\s*[x×])?$", CI);
+
+    /**
+     * Warenkorb-Screenshots (Webshop, Lieferando, foodora): Preise entfernen, Summenzeilen ignorieren,
+     * "Produkt ×2" und Menge in eigener Zeile in "2x Produkt" umwandeln, Zeilen ohne Menge = 1x.
+     */
+    static String cart(String text) {
+        String[] lines = text.replace("\r", "").split("\n");
+        int priced = 0;
+        for (String l : lines) if (CART_PRICE.matcher(l.trim()).find() && l.trim().matches(".*\\p{L}.*|.*€.*")) priced++;
+        if (priced < 2 && lines.length < 3) return text;           // normale Chatnachricht
+        if (priced < 2) return text;
+        List<String> out = new ArrayList<>();
+        for (String l0 : lines) {
+            String l = l0.trim().replace('×', 'x');
+            if (l.isEmpty()) continue;
+            if (CART_SKIP.matcher(l).matches()) continue;
+            String noPrice = CART_PRICE.matcher(l).replaceAll("").trim();
+            if (noPrice.isEmpty()) {                                 // nur Preis: gehört zum Produkt davor
+                if (!out.isEmpty()) {
+                    String prev = out.get(out.size() - 1);
+                    if (!prev.matches("(?i)^\\d{1,2}\\s*(x|stk\\.?|stück)?\\s+.*") && prev.matches(".*\\p{L}{3,}.*")
+                            && !prev.contains(" extra ")) out.set(out.size() - 1, "1x " + prev);
+                }
+                continue;
+            }
+            Matcher ql = CART_QTY_LINE.matcher(noPrice);
+            if (ql.matches()) {                                      // Menge in eigener Zeile -> zum vorigen Produkt
+                if (!out.isEmpty() && !out.get(out.size() - 1).matches("^\\d{1,2}x .*")) {
+                    out.set(out.size() - 1, ql.group(1) + "x " + out.get(out.size() - 1));
+                }
+                continue;
+            }
+            if (noPrice.startsWith("+")) {                           // Extra zum vorigen Artikel
+                String ex = noPrice.substring(1).trim().replaceAll("(?i)^(extra|zusätzlich|mit)\\s+", "");
+                if (!out.isEmpty()) out.set(out.size() - 1, out.get(out.size() - 1) + " extra " + ex);
+                continue;
+            }
+            Matcher qe = CART_QTY_END.matcher(noPrice);
+            if (qe.matches()) noPrice = qe.group(2) + "x " + qe.group(1).trim();
+            if (!noPrice.matches("(?i)^\\d{1,2}\\s*(x|stk\\.?|stück)?\\s+.*") && noPrice.matches(".*\\p{L}{3,}.*")
+                    && CART_PRICE.matcher(l).find()) {
+                noPrice = "1x " + noPrice;                           // Produktzeile mit Preis, aber ohne Menge
+            }
+            out.add(noPrice);
+        }
+        return String.join("\n", out);
     }
 
     private static final List<String> pendingExtra = new ArrayList<>();
@@ -437,7 +495,8 @@ final class Parser {
     }
 
     static String norm(String s) {
-        return s.toLowerCase(Locale.GERMAN).replaceAll("[,.;:!?()\"]", " ").replaceAll("\\s+", " ").trim();
+        return s.toLowerCase(Locale.GERMAN).replaceAll("[,.;:!?()\"]", " ").replaceAll("(?<=\\p{L})-(?=\\p{L})", " ")
+                .replaceAll("\\s+", " ").trim();
     }
 
     private static String wordToNum(String w) {
