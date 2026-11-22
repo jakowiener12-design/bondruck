@@ -93,7 +93,7 @@ final class Prefs {
         if (address == null) return;
         String street = address.replaceAll("\\s+\\d.*$", "").trim();
         if (street.length() < 5 || Streets.match(street) != null) return;
-        if (!street.matches("(?iu).*(straße|strasse|gasse|weg|platz|allee|ring|zeile|lände)$")) return;
+        if (!street.matches("(?i).*(straße|strasse|gasse|weg|platz|allee|ring|zeile|lände)$")) return;
         SharedPreferences sp = get(c);
         String plz = address.matches(".*,\\s*(\\d{4}.*)$") ? address.replaceAll(".*,\\s*(\\d{4}.*)$", "$1") : "";
         sp.edit().putString(LEARNED, sp.getString(LEARNED, "") + "\n" + street + ";" + plz).apply();

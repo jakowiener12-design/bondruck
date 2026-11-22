@@ -69,7 +69,7 @@ final class Streets {
 
     private static final Pattern CANDIDATE = Pattern.compile(
             "((?:[\\p{L}][\\p{L}.\\-]*[ \\t]){0,3}[\\p{L}][\\p{L}.\\-]{3,})[ \\t]*(\\d{1,4}[a-zA-Z]?(?:[ \\t]*[/\\-][ \\t]*\\d{1,4}[a-zA-Z]?)*)",
-            Pattern.UNICODE_CHARACTER_CLASS);
+            Parser.UCC);
 
     /** Sucht im Text eine bekannte Straße (auch mit Tippfehler) mit Hausnummer. {start, end, name, nummer, plz} */
     static Object[] find(String text) {

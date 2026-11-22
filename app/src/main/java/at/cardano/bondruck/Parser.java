@@ -44,7 +44,10 @@ final class Parser {
         String type; // LIEFERUNG oder ABHOLUNG
     }
 
-    private static final int CI = Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.UNICODE_CHARACTER_CLASS;
+    /** Android (ICU) hat Unicode-\\b/\\w von Haus aus und kennt UNICODE_CHARACTER_CLASS nicht. */
+    static final int UCC = System.getProperty("java.vendor", "").toLowerCase(Locale.ROOT).contains("android")
+            ? 0 : Pattern.UNICODE_CHARACTER_CLASS;
+    private static final int CI = Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | UCC;
 
     private static final String STREET =
             "(?:stra(?:ß|ss|s)e|s(?:rt|tar|ta)a?(?:ß|ss|s)e|str\\.?(?=\\s|\\d)|ga(?:ss|ß|s)e|weg|pla(?:tz|z)|allee|ring|zeile|lände|lande|kai|steig|promenade)";
@@ -133,10 +136,10 @@ final class Parser {
                 String z = tm.group().trim().replaceAll("[,.!]+$", "");
                 if (!r.hints.contains("Zeit: " + z)) r.hints.add("Zeit: " + z);
             }
-            msg = msg.replaceAll("(?iu)(?<![\\p{L}\\d])(bir|1)\\s+tane(si|sine|sinde)(?![\\p{L}])", "1x")
-                     .replaceAll("(?iu)(?<![\\p{L}\\d])(iki|2)\\s+tane(si|sine|sinde)(?![\\p{L}])", "2x")
-                     .replaceAll("(?iu)(?<![\\p{L}])(einer|eins|einen) davon(?![\\p{L}])", "1x")
-                     .replaceAll("(?iu)(?<![\\p{L}])davon (einer|eins|einen)(?![\\p{L}])", "1x");
+            msg = msg.replaceAll("(?i)(?<![\\p{L}\\d])(bir|1)\\s+tane(si|sine|sinde)(?![\\p{L}])", "1x")
+                     .replaceAll("(?i)(?<![\\p{L}\\d])(iki|2)\\s+tane(si|sine|sinde)(?![\\p{L}])", "2x")
+                     .replaceAll("(?i)(?<![\\p{L}])(einer|eins|einen) davon(?![\\p{L}])", "1x")
+                     .replaceAll("(?i)(?<![\\p{L}])davon (einer|eins|einen)(?![\\p{L}])", "1x");
             msg = TIME.matcher(msg).replaceAll(" ").replaceAll("[ \\t]+", " ");
             msg = PHRASES.matcher(msg).replaceAll(" ").replaceAll("[ \\t]+", " ");
 
@@ -202,11 +205,11 @@ final class Parser {
             int end = i + 1 < spans.size() ? spans.get(i + 1)[0] : line.length();
             String seg = line.substring(spans.get(i)[1], end)
                     .replaceAll("(?i)(\\s+(lieferung|liefern|abholung|abholen|adresse|lieferadresse|an|die|der|nach|zur|zu|bitte|um|für|fuer))+[\\s,;.!:]*$", "")
-                    .replaceAll("(?iu)[\\s,;.!]+(bitte|danke|und|oder|ve|veya|lütfen|lutfen)?[\\s,;.!]*$", "").trim();
+                    .replaceAll("(?i)[\\s,;.!]+(bitte|danke|und|oder|ve|veya|lütfen|lutfen)?[\\s,;.!]*$", "").trim();
             if (seg.isEmpty()) continue;
             // "1x ohne zwiebel", "einer nur sauce": Hinweis für einen Teil des vorigen Artikels
-            String segN = seg.replaceAll("(?iu)^(tanesi|tanesine|tanesinde|davon|bitte|biri|birinde)\\s+", "");
-            if (!r.items.isEmpty() && segN.matches("(?isu)^(ohne|nur|mit|extra|dazu|bitte|scharf|mild|halbiert|kein|keine|soğansız|sogansiz|acılı|acili|acısız|acisiz|sadece|salatasız|salatasiz|sossuz|bol|az|ekstra|domatessiz)(?![\\p{L}]).*")) {
+            String segN = seg.replaceAll("(?i)^(tanesi|tanesine|tanesinde|davon|bitte|biri|birinde)\\s+", "");
+            if (!r.items.isEmpty() && segN.matches("(?is)^(ohne|nur|mit|extra|dazu|bitte|scharf|mild|halbiert|kein|keine|soğansız|sogansiz|acılı|acili|acısız|acisiz|sadece|salatasız|salatasiz|sossuz|bol|az|ekstra|domatessiz)(?![\\p{L}]).*")) {
                 String t = segN.replaceAll("[,;.!]+$", "").trim();
                 r.items.get(r.items.size() - 1).notes.add(qtys.get(i) + "x " + cap(translate(t)));
                 continue;
@@ -214,7 +217,7 @@ final class Parser {
             Item it = new Item();
             it.qty = qtys.get(i);
             // "karışık porsiyon, patates ve 2 su" / "2 kebap und cola": weitere Artikel ohne Menge abtrennen
-            String[] parts = seg.split("(?iu)\\s*,\\s*|\\s+(?:und|ve|u\\.?|\\+)\\s+");
+            String[] parts = seg.split("(?i)\\s*,\\s*|\\s+(?:und|ve|u\\.?|\\+)\\s+");
             if (parts.length > 1) {
                 StringBuilder keep = new StringBuilder(parts[0]);
                 List<String> extraItems = new ArrayList<>();
@@ -243,7 +246,7 @@ final class Parser {
             if (found && nm.start() > 0) {
                 product = seg.substring(0, nm.start());
                 for (String n : NOTE_SPLIT.split(seg.substring(nm.start()))) {
-                    String t = n.replaceAll("^\\s*bitte\\s+", "").replaceAll("(?iu)[,;.!\\s]+(und|bitte|ve|lütfen|lutfen|oder)?\\s*$", "").trim();
+                    String t = n.replaceAll("^\\s*bitte\\s+", "").replaceAll("(?i)[,;.!\\s]+(und|bitte|ve|lütfen|lutfen|oder)?\\s*$", "").trim();
                     t = translate(t);
                     if (t.isEmpty()) continue;
                     // "extra pommes", "dazu ketchup", "mit extra käse" -> Beilage mit Preis

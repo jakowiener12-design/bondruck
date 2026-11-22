@@ -91,6 +91,21 @@ public class MainActivity extends Activity {
         setContentView(root);
         fillLabels();
 
+        String crash = getSharedPreferences("crash", MODE_PRIVATE).getString("last", null);
+        if (crash != null) {
+            getSharedPreferences("crash", MODE_PRIVATE).edit().remove("last").apply();
+            final String c = crash;
+            new android.app.AlertDialog.Builder(this)
+                    .setTitle("Bondruck ist abgestürzt")
+                    .setMessage("Bitte diesen Fehler kopieren und schicken:\n\n" + c)
+                    .setPositiveButton("Kopieren", (d, w) -> {
+                        android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                        if (cm != null) cm.setPrimaryClip(android.content.ClipData.newPlainText("Fehler", c));
+                    })
+                    .setNegativeButton("Schließen", null)
+                    .show();
+        }
+
         boolean shared = Intent.ACTION_SEND.equals(getIntent().getAction());
         showTab(shared ? 1 : 0);
         takeShared(getIntent());
@@ -313,6 +328,11 @@ public class MainActivity extends Activity {
     // ---------- Bestellungen anzeigen ----------
 
     private void refreshOrders() {
+        try { refreshOrdersNow(); }
+        catch (Exception e) { toast("Fehler in Liste: " + e.getMessage()); }
+    }
+
+    private void refreshOrdersNow() {
         if (orderList == null) return;
         logList.removeAllViews();
         List<String> lines = OrderStore.getLog();

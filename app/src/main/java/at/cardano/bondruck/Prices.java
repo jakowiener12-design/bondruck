@@ -69,7 +69,7 @@ final class Prices {
 
     /** Getränk mit Pfand: Name enthält eine Literangabe wie 0,33l oder 0,5l. */
     static boolean isDrink(String name) {
-        return name != null && name.matches("(?iu).*\\b\\d+[,.]\\d+\\s*l\\b.*");
+        return name != null && name.matches("(?i).*\\b\\d+[,.]\\d+\\s*l\\b.*");
     }
 
     static int[] total(Map<String, Integer> m, List<Parser.Item> items) { return total(m, items, 0); }
