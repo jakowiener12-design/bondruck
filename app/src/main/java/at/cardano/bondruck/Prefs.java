@@ -21,6 +21,8 @@ final class Prefs {
     static final String STREETS = "streets";
     static final String LEARNED = "streetsLearned";
     static final String PFAND = "pfand";
+    static final String LABEL_H = "labelHeight";
+    static final String LABEL_TOP = "labelTop";
     private static boolean streetsLoaded;
     static final String LOGO_BON = "logoBon";
     static final String LOGO_LABEL = "logoLabel";
@@ -99,6 +101,9 @@ final class Prefs {
         sp.edit().putString(LEARNED, sp.getString(LEARNED, "") + "\n" + street + ";" + plz).apply();
         reloadStreets(c, sp);
     }
+
+    static int labelHeight(Context c) { return num(get(c).getString(LABEL_H, "40"), 40); }
+    static int labelTop(Context c) { return num(get(c).getString(LABEL_TOP, "12"), 12); }
 
     static int pfandCents(Context c) {
         Integer v = Prices.cents(get(c).getString(PFAND, "0,25"));

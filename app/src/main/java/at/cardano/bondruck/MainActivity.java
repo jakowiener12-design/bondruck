@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
     private static final int BG = Color.rgb(242, 242, 242);
     private static final String[] TABS = {"Bestellungen", "Text", "Etiketten", "Einstellungen"};
 
-    private EditText ip, port, wait, repl, ignore, free, labels, copies, header, streets, pfand, search, lName, lPrice, lDesc;
+    private EditText ip, port, wait, repl, ignore, free, labels, copies, header, streets, pfand, lHeight, lTop, search, lName, lPrice, lDesc;
     private final List<Integer> shown = new ArrayList<>();   // Index in labelList je Eintrag im Spinner
     private Switch logoBon, logoLabel, headerBon, headerLabel, prices;
     private Switch auto;
@@ -231,6 +231,13 @@ public class MainActivity extends Activity {
         }
         labelStyle.check(100 + Prefs.labelStyle(this));
         ls.addView(labelStyle);
+        LinearLayout hr = row(ls);
+        lHeight = input(weighted(hr, 1), "Etikett Höhe (mm)", Prefs.get(this).getString(Prefs.LABEL_H, "40"),
+                InputType.TYPE_CLASS_NUMBER, false);
+        lTop = input(weighted(hr, 1), "Leerraum oben (mm)", Prefs.get(this).getString(Prefs.LABEL_TOP, "12"),
+                InputType.TYPE_CLASS_NUMBER, false);
+        hint(ls, "Gilt für Kompakt. Ein Etikett drucken und nachmessen: ist es länger als eingestellt, "
+                + "Leerraum oben um die Differenz erhöhen, ist es kürzer, verringern.");
 
         LinearLayout m = card(p, "Etiketten verwalten");
         hint(m, "Eine Zeile je Etikett: Name | Preis | Beschreibung");
@@ -494,6 +501,8 @@ public class MainActivity extends Activity {
                 .putString(Prefs.HEADER, header.getText().toString())
                 .putBoolean(Prefs.PRICES, prices.isChecked())
                 .putString(Prefs.PFAND, pfand.getText().toString().trim())
+                .putString(Prefs.LABEL_H, lHeight.getText().toString().trim())
+                .putString(Prefs.LABEL_TOP, lTop.getText().toString().trim())
                 .putString(Prefs.STREETS, streets.getText().toString())
                 .putInt(Prefs.LABEL_STYLE, labelStyle.getCheckedRadioButtonId() == 102 ? 2 : 1)
                 .putBoolean(Prefs.LOGO_BON, logoBon.isChecked())

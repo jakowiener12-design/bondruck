@@ -100,7 +100,7 @@ final class Printer {
                 int pf = Prices.isDrink(name) ? Prefs.pfandCents(app) : 0;
                 for (int c = 0; c < Math.max(1, copies); c++) {
                     head(b, logo, header);
-                    if (compact) { compactLabel(b, name, price, desc, pf); continue; }
+                    if (compact) { compactLabel(b, name, price, desc, pf, Prefs.labelHeight(app), Prefs.labelTop(app)); continue; }
                     b.write(new byte[]{0x1B, 0x61, 0x01});             // zentriert
                     // Name: doppelt hoch und breit, 24 Zeichen je Zeile, 2 Zeilen fix
                     b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01});
@@ -137,42 +137,66 @@ final class Printer {
     }
 
     static void compactLabel(ByteArrayOutputStream b, String name, String price, String desc, int pfand) throws IOException {
+        compactLabel(b, name, price, desc, pfand, 40, 12);
+    }
+
+    /**
+     * Regaletikett mit fester Höhe (heightMm). topMm = Leerraum oben (Abstand Druckkopf bis Messer).
+     * Raster: Name 1 Zeile groß, Beschreibung 2 Zeilen (letzte neben dem Preis), Pfand klein.
+     */
+    static void compactLabel(ByteArrayOutputStream b, String name, String price, String desc, int pfand,
+                             int heightMm, int topMm) throws IOException {
+        final int LINE = 30;                                // Zeilenabstand normale Zeile (Punkte, 8 je mm)
+        final int BIG = 48;                                 // doppelt hohe Zeile
+        int used = 0;
         String pr = price.trim();
         if (!pr.isEmpty() && !pr.contains("€")) pr = "€ " + pr;
         String box = " " + pr + " ";
         int priceCols = box.length() * 2;                   // doppelt breit
         int descCols = 48 - priceCols - 1;
 
+        b.write(new byte[]{0x1B, 0x33, (byte) LINE});       // fester Zeilenabstand
         b.write(new byte[]{0x1B, 0x61, 0x00});              // links
-        b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01});
-        for (String l : fixLines(name.toUpperCase(Locale.GERMAN), 24, 2)) txt(b, l + "\n");
-        b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
 
-        List<String> d = fixLines(desc, descCols, 3);
-        // nach unten ausrichten: letzte Beschreibungszeile steht neben dem Preis
+        // Name: doppelt hoch, fett, 1 Zeile
+        b.write(new byte[]{0x1D, 0x21, 0x01, 0x1B, 0x45, 0x01});
+        txt(b, fixLines(name.toUpperCase(Locale.GERMAN), 48, 1).get(0) + "\n");
+        b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
+        used += BIG;
+
+        // Beschreibung unten bündig, 2 Zeilen, die zweite neben dem Preis
+        List<String> d = fixLines(desc, descCols, 2);
         List<String> filled = new ArrayList<>();
         for (String l : d) if (!l.isEmpty()) filled.add(l);
         d = new ArrayList<>();
-        for (int i = filled.size(); i < 3; i++) d.add("");
+        for (int i = filled.size(); i < 2; i++) d.add("");
         d.addAll(filled);
         txt(b, d.get(0) + "\n");
-        txt(b, d.get(1) + "\n");
-        String last = d.get(2);
-        StringBuilder pad = new StringBuilder(last);
+        used += LINE;
+        StringBuilder pad = new StringBuilder(d.get(1));
         while (pad.length() < descCols + 1) pad.append(' ');
         txt(b, pad.toString());
         b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01, 0x1D, 0x42, 0x01}); // groß, fett, invertiert
         txt(b, box);
         b.write(new byte[]{0x1D, 0x42, 0x00, 0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
         txt(b, "\n");
-        if (pfand > 0) {
-            b.write(new byte[]{0x1B, 0x61, 0x02, 0x1B, 0x45, 0x01});     // rechts, fett
-            txt(b, "+ " + Prices.fmt(pfand) + " € Pfand\n");
-            b.write(new byte[]{0x1B, 0x45, 0x00, 0x1B, 0x61, 0x00});
-        } else {
-            txt(b, "\n");                                             // gleiche Höhe wie mit Pfand
+        used += BIG;
+
+        // Pfand klein rechts (oder Leerzeile, damit die Höhe gleich bleibt)
+        b.write(new byte[]{0x1B, 0x4D, 0x01, 0x1B, 0x61, 0x02});
+        txt(b, (pfand > 0 ? "+ " + Prices.fmt(pfand) + " € Pfand" : " ") + "\n");
+        b.write(new byte[]{0x1B, 0x4D, 0x00, 0x1B, 0x61, 0x00});
+        used += LINE;
+
+        b.write(new byte[]{0x1B, 0x32});                    // Zeilenabstand zurück
+        // bis zur gewünschten Höhe auffüllen
+        int rest = heightMm * 8 - topMm * 8 - used;
+        while (rest > 0) {
+            int n = Math.min(rest, 255);
+            b.write(new byte[]{0x1B, 0x4A, (byte) n});
+            rest -= n;
         }
-        b.write(new byte[]{0x1B, 0x64, 0x03, 0x1D, 0x56, 0x42, 0x00});
+        b.write(new byte[]{0x1D, 0x56, 0x42, 0x00});        // bis zum Messer vorschieben und schneiden
     }
 
     /** Text auf genau n Zeilen umbrechen (auffüllen oder abschneiden), damit die Position fix bleibt. */
