@@ -70,6 +70,16 @@ final class Printer {
             Parser.Result r = Parser.parse(msgs, Parser.replacements(Prefs.repl(app)));
             boolean known = enrich(app, chat, msgs, r);
             boolean reprint = o.printedAt > 0;
+            if (reprint) {
+                r.prevPrint = o.printedAt;
+                int from = Math.min(o.printedCount, msgs.size());
+                if (from < msgs.size()) {
+                    Parser.Result nr = Parser.parse(new ArrayList<>(msgs.subList(from, msgs.size())),
+                            Parser.replacements(Prefs.repl(app)));
+                    Parser.merge(nr);
+                    r.newItems.addAll(nr.items);
+                }
+            }
             pfand = Prefs.pfandCents(app);
             try {
                 send(Prefs.ip(app), Prefs.port(app),
@@ -418,7 +428,15 @@ final class Printer {
             b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
             txt(b, "bitte beim Kunden nachfragen\n");
         }
-        if (reprint) txt(b, "*** NACHDRUCK ***\n");
+        if (reprint && !r.newItems.isEmpty()) {
+            b.write(new byte[]{0x1D, 0x42, 0x01, 0x1B, 0x45, 0x01});
+            txt(b, " AKTUALISIERT \n");
+            b.write(new byte[]{0x1D, 0x42, 0x00, 0x1B, 0x45, 0x00});
+            if (r.prevPrint > 0) txt(b, "ersetzt Bon von "
+                    + new SimpleDateFormat("HH:mm", Locale.GERMAN).format(new Date(r.prevPrint)) + " Uhr\n");
+        } else if (reprint) {
+            txt(b, "*** NACHDRUCK ***\n");
+        }
         long t = times.isEmpty() ? System.currentTimeMillis() : times.get(0);
         txt(b, new SimpleDateFormat("dd.MM.yyyy  HH:mm", Locale.GERMAN).format(new Date(t)) + " Uhr\n");
         b.write(new byte[]{0x1B, 0x61, 0x00});
@@ -473,6 +491,20 @@ final class Printer {
             b.write(new byte[]{0x1D, 0x21, 0x00});
         }
         txt(b, dbl + "\n");
+
+        if (!r.newItems.isEmpty()) {
+            b.write(new byte[]{0x1D, 0x42, 0x01, 0x1B, 0x45, 0x01});
+            txt(b, " NEU DAZU \n");
+            b.write(new byte[]{0x1D, 0x42, 0x00, 0x1B, 0x45, 0x00});
+            b.write(new byte[]{0x1D, 0x21, sz, 0x1B, 0x45, 0x01});
+            for (Parser.Item it : r.newItems) {
+                txt(b, it.qty + "x " + it.name + "\n");
+                for (String ex : it.extras) txt(b, "   + " + ex + "\n");
+                for (String n : it.notes) txt(b, "   - " + n + "\n");
+            }
+            b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
+            txt(b, dbl + "\n");
+        }
 
         // Kunde, Telefon, Adresse jeweils mit Überschrift und Wert darunter
         LinkedHashSet<String> phones = new LinkedHashSet<>();

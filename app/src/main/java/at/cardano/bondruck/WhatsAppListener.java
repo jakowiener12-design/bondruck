@@ -10,7 +10,9 @@ import android.os.Parcelable;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -109,9 +111,11 @@ public class WhatsAppListener extends NotificationListenerService {
         OrderStore.Order o = OrderStore.add(app, chat, text, time);
         OrderStore.log(chat + via + ": \"" + (text.length() > 40 ? text.substring(0, 40) + "…" : text) + "\"");
         Notifier.update(app, chat);
-        if (Prefs.auto(app) && o.printedAt == 0) {
+        boolean addOn = o.printedAt > 0 && OrderStore.hasItems(app, text);
+        if (Prefs.auto(app) && (o.printedAt == 0 || addOn)) {
             schedule(app, chat);
-            OrderStore.log(chat + ": Autodruck in " + Prefs.waitSec(app) + " s geprüft");
+            OrderStore.log(chat + (addOn ? ": Nachbestellung, aktualisierter Bon in " : ": Autodruck in ")
+                    + Prefs.waitSec(app) + " s geprüft");
         }
     }
 
@@ -120,7 +124,15 @@ public class WhatsAppListener extends NotificationListenerService {
         Runnable r = () -> {
             timers.remove(chat);
             OrderStore.Order o = OrderStore.get(app, chat);
-            if (o == null || o.printedAt > 0) return;          // nur einmal automatisch
+            if (o == null) return;
+            if (o.printedAt > 0) {
+                // aktualisierter Bon nur, wenn seit dem Druck Artikel dazukamen
+                List<String> since = new ArrayList<>(o.msgs.subList(Math.min(o.printedCount, o.msgs.size()), o.msgs.size()));
+                if (since.isEmpty() || Parser.parse(since, Parser.replacements(Prefs.repl(app))).items.isEmpty()) return;
+                OrderStore.log(chat + ": aktualisierter Bon wird gedruckt");
+                Printer.printOrder(app, chat, false);
+                return;
+            }
             Parser.Result res = Parser.parse(o.msgs, Parser.replacements(Prefs.repl(app)));
             boolean hasAddress = res.address != null || "ABHOLUNG".equals(res.type)
                     || OrderStore.knownAddress(app, chat) != null;

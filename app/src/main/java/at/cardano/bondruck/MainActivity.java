@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
     private static final int BG = Color.rgb(242, 242, 242);
     private static final String[] TABS = {"Bestellungen", "Text", "Etiketten", "Einstellungen"};
 
-    private EditText ip, port, wait, repl, ignore, free, labels, copies, header, streets, pfand, lHeight, lTop, search, lName, lPrice, lDesc;
+    private EditText ip, port, wait, window, repl, ignore, free, labels, copies, header, streets, pfand, lHeight, lTop, search, lName, lPrice, lDesc;
     private final List<Integer> shown = new ArrayList<>();   // Index in labelList je Eintrag im Spinner
     private Switch logoBon, logoLabel, headerBon, headerLabel, prices;
     private Switch auto;
@@ -300,6 +300,9 @@ public class MainActivity extends Activity {
         a.addView(auto);
         wait = input(a, "Wartezeit ohne neue Nachricht (Sekunden)",
                 sp.getString(Prefs.WAIT, Prefs.DEF_WAIT), InputType.TYPE_CLASS_NUMBER, false);
+        window = input(a, "Zeitfenster: alles innerhalb von … Minuten ist eine Bestellung",
+                sp.getString(Prefs.WINDOW, "30"), InputType.TYPE_CLASS_NUMBER, false);
+        hint(a, "Kommen nach dem Druck noch Artikel dazu, wird ein aktualisierter Bon mit \"NEU DAZU\" gedruckt.");
 
         LinearLayout fd = card(p, "Logo und Firmendaten");
         logoBon = sw(fd, "Logo auf Bon", Prefs.logoBon(this));
@@ -532,6 +535,7 @@ public class MainActivity extends Activity {
                 .putInt(Prefs.SIZE, s >= 1 && s <= 3 ? s : 2)
                 .putBoolean(Prefs.AUTO, auto.isChecked())
                 .putString(Prefs.WAIT, wait.getText().toString().trim())
+                .putString(Prefs.WINDOW, window.getText().toString().trim())
                 .putString(Prefs.REPL, repl.getText().toString())
                 .putString(Prefs.IGNORE, ignore.getText().toString())
                 .putString(Prefs.LABELS, labels.getText().toString())

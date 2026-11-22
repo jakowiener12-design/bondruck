@@ -46,8 +46,8 @@ final class OrderStore {
     static synchronized Order add(Context c, String chat, String text, long time) {
         load(c);
         Order o = orders.get(chat);
-        boolean startNew = o == null || time - o.last > ORDER_GAP_MS;
-        if (!startNew && o.printedAt > 0 && hasItems(c, text)) startNew = true;   // neue Bestellung nach Druck
+        long window = Prefs.windowMin(c) * 60 * 1000L;
+        boolean startNew = o == null || time - o.first > window;   // alles im Zeitfenster = eine Bestellung
         if (startNew) {
             o = new Order();
             o.chat = chat;
@@ -61,7 +61,7 @@ final class OrderStore {
         return o;
     }
 
-    private static boolean hasItems(Context c, String text) {
+    static boolean hasItems(Context c, String text) {
         List<String> one = new ArrayList<>();
         one.add(text);
         return !Parser.parse(one, Parser.replacements(Prefs.repl(c))).items.isEmpty();
