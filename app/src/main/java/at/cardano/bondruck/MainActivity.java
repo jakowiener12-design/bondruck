@@ -42,7 +42,7 @@ public class MainActivity extends Activity {
     private EditText ip, port, wait, repl, ignore, free, labels, copies, header;
     private Switch logoBon, logoLabel, headerBon, headerLabel;
     private Switch auto;
-    private RadioGroup size;
+    private RadioGroup size, labelStyle;
     private Spinner labelPick;
     private TextView status;
     private LinearLayout orderList;
@@ -163,6 +163,18 @@ public class MainActivity extends Activity {
             try { n = Integer.parseInt(copies.getText().toString().trim()); } catch (Exception ex) { n = 1; }
             Printer.printLabel(this, e[0], e[1], e[2], Math.min(n, 50));
         });
+
+        LinearLayout ls = card(p, "Etikett Layout");
+        labelStyle = new RadioGroup(this);
+        String[] st = {"Kompakt: Name links, Preis rechts invertiert", "Groß: alles zentriert"};
+        for (int i = 0; i < 2; i++) {
+            RadioButton rb = new RadioButton(this);
+            rb.setId(100 + i + 1);
+            rb.setText(st[i]);
+            labelStyle.addView(rb);
+        }
+        labelStyle.check(100 + Prefs.labelStyle(this));
+        ls.addView(labelStyle);
 
         LinearLayout m = card(p, "Etiketten verwalten");
         hint(m, "Eine Zeile je Etikett: Name | Preis | Beschreibung");
@@ -369,6 +381,7 @@ public class MainActivity extends Activity {
                 .putString(Prefs.IGNORE, ignore.getText().toString())
                 .putString(Prefs.LABELS, labels.getText().toString())
                 .putString(Prefs.HEADER, header.getText().toString())
+                .putInt(Prefs.LABEL_STYLE, labelStyle.getCheckedRadioButtonId() == 102 ? 2 : 1)
                 .putBoolean(Prefs.LOGO_BON, logoBon.isChecked())
                 .putBoolean(Prefs.HEADER_BON, headerBon.isChecked())
                 .putBoolean(Prefs.LOGO_LABEL, logoLabel.isChecked())

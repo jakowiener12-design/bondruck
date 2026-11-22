@@ -92,8 +92,10 @@ final class Printer {
                 String header = Prefs.headerLabel(app) ? Prefs.header(app) : null;
                 ByteArrayOutputStream b = new ByteArrayOutputStream();
                 b.write(new byte[]{0x1B, 0x40, 0x1C, 0x2E, 0x1B, 0x74, 16});
+                boolean compact = Prefs.labelStyle(app) == 1;
                 for (int c = 0; c < Math.max(1, copies); c++) {
                     head(b, logo, header);
+                    if (compact) { compactLabel(b, name, price, desc); continue; }
                     b.write(new byte[]{0x1B, 0x61, 0x01});             // zentriert
                     // Name: doppelt hoch und breit, 24 Zeichen je Zeile, 2 Zeilen fix
                     b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01});
@@ -118,6 +120,42 @@ final class Printer {
                 toast(app, "Druck fehlgeschlagen: " + e.getMessage());
             }
         }).start();
+    }
+
+    /**
+     * Regaletikett: Name groß links, Beschreibung links, Preis rechts invertiert in derselben Zeile.
+     * Feste Höhe: Name 2 Zeilen, Beschreibung 3 Zeilen (letzte neben dem Preis).
+     */
+    static void compactLabel(ByteArrayOutputStream b, String name, String price, String desc) throws IOException {
+        String pr = price.trim();
+        if (!pr.isEmpty() && !pr.contains("€")) pr = "€ " + pr;
+        String box = " " + pr + " ";
+        int priceCols = box.length() * 2;                   // doppelt breit
+        int descCols = 48 - priceCols - 1;
+
+        b.write(new byte[]{0x1B, 0x61, 0x00});              // links
+        b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01});
+        for (String l : fixLines(name.toUpperCase(Locale.GERMAN), 24, 2)) txt(b, l + "\n");
+        b.write(new byte[]{0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
+
+        List<String> d = fixLines(desc, descCols, 3);
+        // nach unten ausrichten: letzte Beschreibungszeile steht neben dem Preis
+        List<String> filled = new ArrayList<>();
+        for (String l : d) if (!l.isEmpty()) filled.add(l);
+        d = new ArrayList<>();
+        for (int i = filled.size(); i < 3; i++) d.add("");
+        d.addAll(filled);
+        txt(b, d.get(0) + "\n");
+        txt(b, d.get(1) + "\n");
+        String last = d.get(2);
+        StringBuilder pad = new StringBuilder(last);
+        while (pad.length() < descCols + 1) pad.append(' ');
+        txt(b, pad.toString());
+        b.write(new byte[]{0x1D, 0x21, 0x11, 0x1B, 0x45, 0x01, 0x1D, 0x42, 0x01}); // groß, fett, invertiert
+        txt(b, box);
+        b.write(new byte[]{0x1D, 0x42, 0x00, 0x1D, 0x21, 0x00, 0x1B, 0x45, 0x00});
+        txt(b, "\n");
+        b.write(new byte[]{0x1B, 0x64, 0x03, 0x1D, 0x56, 0x42, 0x00});
     }
 
     /** Text auf genau n Zeilen umbrechen (auffüllen oder abschneiden), damit die Position fix bleibt. */

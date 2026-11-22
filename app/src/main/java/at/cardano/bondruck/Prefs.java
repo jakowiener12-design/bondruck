@@ -21,7 +21,8 @@ final class Prefs {
     static final String LOGO_LABEL = "logoLabel";
     static final String HEADER_BON = "headerBon";
     static final String HEADER_LABEL = "headerLabel";
-    private static final int DEFAULTS_VERSION = 2;
+    private static final int DEFAULTS_VERSION = 3;
+    static final String LABEL_STYLE = "labelStyle"; // 1 kompakt, 2 groß zentriert
     private static final java.util.Map<String, String> assets = new java.util.HashMap<>();
 
     static final String DEF_IP = "192.168.68.51";
@@ -32,9 +33,12 @@ final class Prefs {
 
     static SharedPreferences get(Context c) {
         SharedPreferences sp = c.getSharedPreferences("bondruck", Context.MODE_PRIVATE);
-        if (sp.getInt("defver", 0) < DEFAULTS_VERSION) {
-            // neue Speisekarte übernehmen
-            sp.edit().remove(REPL).remove(LABELS).putInt("defver", DEFAULTS_VERSION).apply();
+        int v = sp.getInt("defver", 0);
+        if (v < DEFAULTS_VERSION) {
+            SharedPreferences.Editor e = sp.edit();
+            if (v < 2) e.remove(REPL).remove(LABELS);          // neue Speisekarte übernehmen
+            if (v < 3) e.putBoolean(LOGO_LABEL, false).putBoolean(HEADER_LABEL, false);
+            e.putInt("defver", DEFAULTS_VERSION).apply();
         }
         return sp;
     }
@@ -73,7 +77,8 @@ final class Prefs {
     static String defHeader(Context c) { return asset(c, "firmendaten.txt"); }
     static String header(Context c) { return get(c).getString(HEADER, defHeader(c)); }
     static boolean logoBon(Context c) { return get(c).getBoolean(LOGO_BON, true); }
-    static boolean logoLabel(Context c) { return get(c).getBoolean(LOGO_LABEL, true); }
+    static boolean logoLabel(Context c) { return get(c).getBoolean(LOGO_LABEL, false); }
+    static int labelStyle(Context c) { return get(c).getInt(LABEL_STYLE, 1); }
     static boolean headerBon(Context c) { return get(c).getBoolean(HEADER_BON, true); }
     static boolean headerLabel(Context c) { return get(c).getBoolean(HEADER_LABEL, false); }
 
