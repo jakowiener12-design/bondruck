@@ -39,7 +39,8 @@ public class MainActivity extends Activity {
     private static final int BG = Color.rgb(242, 242, 242);
     private static final String[] TABS = {"Bestellungen", "Text", "Etiketten", "Einstellungen"};
 
-    private EditText ip, port, wait, repl, ignore, free, labels, copies, header;
+    private EditText ip, port, wait, repl, ignore, free, labels, copies, header, search, lName, lPrice, lDesc;
+    private final List<Integer> shown = new ArrayList<>();   // Index in labelList je Eintrag im Spinner
     private Switch logoBon, logoLabel, headerBon, headerLabel;
     private Switch auto;
     private RadioGroup size, labelStyle;
@@ -167,17 +168,41 @@ public class MainActivity extends Activity {
     private LinearLayout buildLabels() {
         LinearLayout p = column();
         LinearLayout c = card(p, "Etikett drucken");
+        search = input(c, "Suchen", "", InputType.TYPE_CLASS_TEXT, false);
+        search.setHint("z.B. mexi, cola, dürüm");
+        search.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence a, int b, int d, int e) { }
+            public void onTextChanged(CharSequence a, int b, int d, int e) { }
+            public void afterTextChanged(android.text.Editable e) { fillLabels(); }
+        });
         label(c, "Produkt");
         labelPick = new Spinner(this);
-        c.addView(labelPick);
-        copies = input(c, "Anzahl", "1", InputType.TYPE_CLASS_NUMBER, false);
-        button(c, "Etikett drucken", true, () -> {
-            String[] e = selectedLabel();
-            if (e == null) { toast("Kein Etikett angelegt"); return; }
-            int n;
-            try { n = Integer.parseInt(copies.getText().toString().trim()); } catch (Exception ex) { n = 1; }
-            Printer.printLabel(this, e[0], e[1], e[2], Math.min(n, 50));
+        labelPick.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            public void onItemSelected(android.widget.AdapterView<?> a, View v, int pos, long id) { loadSelected(); }
+            public void onNothingSelected(android.widget.AdapterView<?> a) { }
         });
+        c.addView(labelPick);
+
+        lName = input(c, "Name", "", InputType.TYPE_CLASS_TEXT, false);
+        LinearLayout pr = row(c);
+        lPrice = input(weighted(pr, 1), "Preis", "", InputType.TYPE_CLASS_TEXT, false);
+        copies = input(weighted(pr, 1), "Anzahl", "1", InputType.TYPE_CLASS_NUMBER, false);
+        lDesc = input(c, "Beschreibung", "", InputType.TYPE_CLASS_TEXT, true);
+        lDesc.setMinLines(2);
+
+        button(c, "Etikett drucken", true, () -> {
+            String n = lName.getText().toString().trim();
+            if (n.isEmpty()) { toast("Kein Name"); return; }
+            int k;
+            try { k = Integer.parseInt(copies.getText().toString().trim()); } catch (Exception ex) { k = 1; }
+            save();
+            Printer.printLabel(this, n, lPrice.getText().toString().trim(),
+                    lDesc.getText().toString().trim().replace("\n", " "), Math.min(k, 50));
+        });
+        LinearLayout ed = row(c);
+        button(ed, "Änderung speichern", false, () -> editLabel(false));
+        button(ed, "Als neu hinzufügen", false, () -> editLabel(true));
+        button(c, "Ausgewähltes Etikett löschen", false, this::deleteLabel);
 
         LinearLayout ls = card(p, "Etikett Layout");
         labelStyle = new RadioGroup(this);
@@ -444,14 +469,82 @@ public class MainActivity extends Activity {
 
     private void fillLabels() {
         List<String> names = new ArrayList<>();
-        for (String[] e : labelList()) names.add(e[0] + "   € " + e[1]);
+        shown.clear();
+        String q = search == null ? "" : search.getText().toString().trim().toLowerCase(Locale.GERMAN);
+        List<String[]> all = labelList();
+        for (int i = 0; i < all.size(); i++) {
+            String[] e = all.get(i);
+            if (!q.isEmpty() && !(e[0] + " " + e[2]).toLowerCase(Locale.GERMAN).contains(q)) continue;
+            names.add(e[0] + "   € " + e[1]);
+            shown.add(i);
+        }
         labelPick.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, names));
+        if (names.isEmpty() && lName != null) { lName.setText(""); lPrice.setText(""); lDesc.setText(""); }
     }
 
-    private String[] selectedLabel() {
-        List<String[]> l = labelList();
+    /** Index des ausgewählten Etiketts in der vollen Liste, -1 wenn keins. */
+    private int selectedIndex() {
         int i = labelPick.getSelectedItemPosition();
-        return i >= 0 && i < l.size() ? l.get(i) : null;
+        return i >= 0 && i < shown.size() ? shown.get(i) : -1;
+    }
+
+    private void loadSelected() {
+        int i = selectedIndex();
+        List<String[]> l = labelList();
+        if (i < 0 || i >= l.size()) return;
+        lName.setText(l.get(i)[0]);
+        lPrice.setText(l.get(i)[1]);
+        lDesc.setText(l.get(i)[2]);
+    }
+
+    private void editLabel(boolean asNew) {
+        String n = lName.getText().toString().trim().replace("|", "/");
+        if (n.isEmpty()) { toast("Kein Name"); return; }
+        String line = n + " | " + lPrice.getText().toString().trim().replace("|", "/")
+                + " | " + lDesc.getText().toString().trim().replace("|", "/").replace("\n", " ");
+        List<String> lines = new ArrayList<>();
+        for (String l : labels.getText().toString().split("\n")) if (!l.trim().isEmpty()) lines.add(l);
+        int idx = selectedIndex();
+        int target;
+        if (asNew || idx < 0) { lines.add(0, line); target = 0; }
+        else { lines.set(lineOf(lines, idx), line); target = idx; }
+        labels.setText(String.join("\n", lines));
+        save();
+        if (search != null) search.setText("");
+        fillLabels();
+        int pos = shown.indexOf(target);
+        if (pos >= 0) labelPick.setSelection(pos);
+        toast(asNew ? "Etikett hinzugefügt" : "Etikett gespeichert");
+    }
+
+    private void deleteLabel() {
+        int idx = selectedIndex();
+        if (idx < 0) { toast("Kein Etikett ausgewählt"); return; }
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Etikett löschen?")
+                .setMessage(lName.getText().toString())
+                .setPositiveButton("Löschen", (d, w) -> {
+                    List<String> lines = new ArrayList<>();
+                    for (String l : labels.getText().toString().split("\n")) if (!l.trim().isEmpty()) lines.add(l);
+                    lines.remove(lineOf(lines, idx));
+                    labels.setText(String.join("\n", lines));
+                    save();
+                    fillLabels();
+                    toast("Gelöscht");
+                })
+                .setNegativeButton("Abbrechen", null)
+                .show();
+    }
+
+    /** Zeilennummer des n-ten gültigen Etiketts. */
+    private int lineOf(List<String> lines, int n) {
+        int k = -1;
+        for (int i = 0; i < lines.size(); i++) {
+            String[] p = lines.get(i).split("\\|", -1);
+            if (p.length >= 2 && !p[0].trim().isEmpty()) k++;
+            if (k == n) return i;
+        }
+        return lines.size() - 1;
     }
 
     // ---------- Bausteine ----------
