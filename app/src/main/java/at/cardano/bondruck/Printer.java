@@ -136,6 +136,7 @@ final class Printer {
                                 Prefs.prices(app) ? Prices.load(app) : null));
                 OrderStore.markPrinted(app, chat);
                 OrderStore.log(chat + ": gedruckt");
+                Archive.put(app, OrderStore.get(app, chat));
                 Notifier.update(app, chat);
                 if (manual) toast(app, "Gedruckt");
             } catch (Exception e) {
@@ -364,8 +365,32 @@ final class Printer {
                                 Prefs.headerBon(app) ? Prefs.header(app) : null,
                                 Prefs.prices(app) ? Prices.load(app) : null));
                 toast(app, "Bestellung gedruckt");
+                Archive.put(app, chat, times.get(0), System.currentTimeMillis(), msgs, times);
             } catch (Exception e) {
                 toast(app, "Druck fehlgeschlagen: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    /** Bestellung aus dem Archiv nachdrucken. */
+    static void printArchive(Context ctx, Archive.Entry e) {
+        final Context app = ctx.getApplicationContext();
+        new Thread(() -> {
+            List<String> msgs = new ArrayList<>(e.msgs);
+            List<Long> times = new ArrayList<>(e.times);
+            Parser.Result r = Parser.parse(msgs, Parser.replacements(Prefs.repl(app)));
+            boolean known = enrich(app, e.chat, msgs, r);
+            pfand = Prefs.pfandCents(app);
+            encoding = Prefs.encoding(app);
+            try {
+                send(Prefs.ip(app), Prefs.port(app),
+                        build(e.chat, msgs, times, r, known, true, Prefs.size(app),
+                                Prefs.logoBon(app) ? Prefs.logo(app) : null,
+                                Prefs.headerBon(app) ? Prefs.header(app) : null,
+                                Prefs.prices(app) ? Prices.load(app) : null));
+                toast(app, "Nachgedruckt");
+            } catch (Exception ex) {
+                toast(app, "Druck fehlgeschlagen: " + ex.getMessage());
             }
         }).start();
     }

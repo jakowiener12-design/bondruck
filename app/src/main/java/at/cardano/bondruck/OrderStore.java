@@ -48,6 +48,7 @@ final class OrderStore {
         Order o = orders.get(chat);
         long window = Prefs.windowMin(c) * 60 * 1000L;
         boolean startNew = o == null || time - o.first > window;   // alles im Zeitfenster = eine Bestellung
+        if (startNew && o != null) Archive.put(c, o);               // alte Bestellung ins Archiv
         if (startNew) {
             o = new Order();
             o.chat = chat;
@@ -91,6 +92,7 @@ final class OrderStore {
 
     static synchronized void remove(Context c, String chat) {
         load(c);
+        Archive.put(c, orders.get(chat));
         orders.remove(chat);
         save(c);
     }
@@ -123,9 +125,12 @@ final class OrderStore {
         return c.getSharedPreferences("orders", Context.MODE_PRIVATE);
     }
 
+    private static final List<Order> expired = new ArrayList<>();
+
     private static void load(Context c) {
         if (loaded) return;
         loaded = true;
+        expired.clear();
         try {
             JSONObject root = new JSONObject(sp(c).getString("data", "{}"));
             JSONArray arr = root.optJSONArray("orders");
@@ -142,6 +147,7 @@ final class OrderStore {
                 JSONArray t = j.getJSONArray("times");
                 for (int k = 0; k < m.length(); k++) { o.msgs.add(m.getString(k)); o.times.add(t.getLong(k)); }
                 if (now - o.last < ORDER_GAP_MS * 4) orders.put(o.chat, o);
+                else expired.add(o);
             }
             JSONObject ph = root.optJSONObject("phones");
             if (ph != null) {
@@ -154,6 +160,8 @@ final class OrderStore {
                 while (keys.hasNext()) { String k = keys.next(); addresses.put(k, a.getString(k)); }
             }
         } catch (Exception ignored) { }
+        for (Order o : expired) Archive.put(c, o);                // beim Laden abgelaufene archivieren
+        expired.clear();
     }
 
     private static void save(Context c) {

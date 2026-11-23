@@ -37,7 +37,8 @@ public class MainActivity extends Activity {
 
     private static final int ORANGE = Color.rgb(211, 84, 0);
     private static final int BG = Color.rgb(242, 242, 242);
-    private static final String[] TABS = {"Bestellungen", "Text", "Etiketten", "Einstellungen"};
+    private static final String[] TABS = {"Bestellungen", "Archiv", "Text", "Etiketten", "Einstellungen"};
+    private static final int T_ORDERS = 0, T_ARCHIVE = 1, T_TEXT = 2, T_LABELS = 3, T_SETTINGS = 4;
 
     private EditText ip, port, wait, window, repl, ignore, free, labels, copies, header, streets, pfand, lHeight, lTop, search, lName, lPrice, lDesc;
     private final List<Integer> shown = new ArrayList<>();   // Index in labelList je Eintrag im Spinner
@@ -84,6 +85,7 @@ public class MainActivity extends Activity {
         root.addView(content, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
 
         pages.add(page(content, buildOrders()));
+        pages.add(page(content, buildArchive()));
         pages.add(page(content, buildText()));
         pages.add(page(content, buildLabels()));
         pages.add(page(content, buildSettings()));
@@ -107,7 +109,7 @@ public class MainActivity extends Activity {
         }
 
         boolean shared = Intent.ACTION_SEND.equals(getIntent().getAction());
-        showTab(shared ? 1 : 0);
+        showTab(shared ? T_TEXT : T_ORDERS);
         takeShared(getIntent());
 
         List<String> perms = new ArrayList<>();
@@ -361,6 +363,86 @@ public class MainActivity extends Activity {
         return p;
     }
 
+    // ---------- Archiv ----------
+
+    private LinearLayout archiveList;
+    private TextView archiveSum;
+    private EditText archiveSearch;
+    private int archiveRange = 0;   // 0 heute, 1 gestern, 2 alle
+
+    private LinearLayout buildArchive() {
+        LinearLayout p = column();
+        LinearLayout c = card(p, "Übersicht");
+        archiveSum = new TextView(this);
+        archiveSum.setTextSize(17);
+        archiveSum.setTypeface(Typeface.DEFAULT_BOLD);
+        c.addView(archiveSum);
+        LinearLayout r = row(c);
+        button(r, "Heute", false, () -> { archiveRange = 0; refreshArchive(); });
+        button(r, "Gestern", false, () -> { archiveRange = 1; refreshArchive(); });
+        button(r, "Alle", false, () -> { archiveRange = 2; refreshArchive(); });
+        archiveSearch = input(c, "Suchen (Kunde, Telefon, Adresse, Artikel)", "", InputType.TYPE_CLASS_TEXT, false);
+        archiveSearch.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence a, int b, int d, int e) { }
+            public void onTextChanged(CharSequence a, int b, int d, int e) { }
+            public void afterTextChanged(android.text.Editable e) { refreshArchive(); }
+        });
+        LinearLayout l = card(p, "Bestellungen");
+        archiveList = new LinearLayout(this);
+        archiveList.setOrientation(LinearLayout.VERTICAL);
+        l.addView(archiveList);
+        return p;
+    }
+
+    private void refreshArchive() {
+        if (archiveList == null) return;
+        try {
+            archiveList.removeAllViews();
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.set(java.util.Calendar.HOUR_OF_DAY, 0); cal.set(java.util.Calendar.MINUTE, 0);
+            cal.set(java.util.Calendar.SECOND, 0); cal.set(java.util.Calendar.MILLISECOND, 0);
+            long today = cal.getTimeInMillis(), yesterday = today - 24L * 3600 * 1000;
+            String q = archiveSearch.getText().toString().trim().toLowerCase(Locale.GERMAN);
+            int nToday = 0, sToday = 0, nY = 0, sY = 0, shown = 0, nSel = 0, sSel = 0;
+            SimpleDateFormat df = new SimpleDateFormat("dd.MM. HH:mm", Locale.GERMAN);
+            for (Archive.Entry e : Archive.all(this)) {
+                if (e.first >= today) { nToday++; sToday += e.sum; }
+                else if (e.first >= yesterday) { nY++; sY += e.sum; }
+                boolean inRange = archiveRange == 2 || (archiveRange == 0 ? e.first >= today : e.first >= yesterday && e.first < today);
+                if (!inRange) continue;
+                if (!q.isEmpty() && !(e.chat + " " + e.address + " " + e.items + " " + String.join(" ", e.msgs))
+                        .toLowerCase(Locale.GERMAN).contains(q)) continue;
+                nSel++; sSel += e.sum;
+                if (shown++ >= 150) continue;
+                LinearLayout box = new LinearLayout(this);
+                box.setOrientation(LinearLayout.VERTICAL);
+                box.setPadding(0, dp(8), 0, dp(10));
+                TextView t = new TextView(this);
+                t.setText(df.format(new Date(e.first)) + "   " + e.chat + (e.type.isEmpty() ? "" : "   " + e.type));
+                t.setTextSize(16);
+                t.setTypeface(Typeface.DEFAULT_BOLD);
+                box.addView(t);
+                TextView d = new TextView(this);
+                d.setText(e.items + (e.address.isEmpty() ? "" : "\nAdresse: " + e.address)
+                        + "\nSumme: € " + Prices.fmt(e.sum) + (e.printedAt > 0 ? "" : "   (nicht gedruckt)"));
+                d.setTextSize(14);
+                box.addView(d);
+                final Archive.Entry fe = e;
+                LinearLayout br = row(box);
+                button(br, "Nachdrucken", false, () -> Printer.printArchive(this, fe));
+                archiveList.addView(box);
+            }
+            archiveSum.setText("Heute: " + nToday + " Bestellungen · € " + Prices.fmt(sToday)
+                    + "\nGestern: " + nY + " Bestellungen · € " + Prices.fmt(sY)
+                    + "\nAuswahl (" + (archiveRange == 0 ? "heute" : archiveRange == 1 ? "gestern" : "alle")
+                    + "): " + nSel + " · € " + Prices.fmt(sSel));
+            if (nSel == 0) hint(archiveList, "Keine Bestellungen.");
+            else if (shown > 150) hint(archiveList, "… nur die neuesten 150 angezeigt, Suche verwenden.");
+        } catch (Exception ex) {
+            toast("Archiv Fehler: " + ex.getMessage());
+        }
+    }
+
     // ---------- Bestellungen anzeigen ----------
 
     private void refreshOrders() {
@@ -442,7 +524,7 @@ public class MainActivity extends Activity {
     // ---------- Reiter ----------
 
     private void showTab(int i) {
-        if (current == 3 && i != 3) save();
+        if (current == T_SETTINGS && i != T_SETTINGS) save();
         current = i;
         for (int k = 0; k < pages.size(); k++) {
             pages.get(k).setVisibility(k == i ? View.VISIBLE : View.GONE);
@@ -451,7 +533,8 @@ public class MainActivity extends Activity {
             t.setTypeface(k == i ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
             t.setBackground(k == i ? underline(ORANGE) : null);
         }
-        if (i == 0) refreshOrders();
+        if (i == T_ORDERS) refreshOrders();
+        if (i == T_ARCHIVE) refreshArchive();
     }
 
     private android.graphics.drawable.Drawable underline(int color) {
@@ -486,9 +569,10 @@ public class MainActivity extends Activity {
     @Override
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
         if (item.getItemId() == 1) {
-            showTab(0);
+            if (current != T_ARCHIVE) showTab(T_ORDERS);
             updateStatus();
             refreshOrders();
+            refreshArchive();
             toast("Aktualisiert");
             return true;
         }
@@ -500,7 +584,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        if (Intent.ACTION_SEND.equals(intent.getAction())) showTab(1);
+        if (Intent.ACTION_SEND.equals(intent.getAction())) showTab(T_TEXT);
         takeShared(intent);
     }
 
@@ -508,7 +592,8 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         updateStatus();
-        if (current == 0) refreshOrders();
+        if (current == T_ORDERS) refreshOrders();
+        if (current == T_ARCHIVE) refreshArchive();
     }
 
     private void updateStatus() {
@@ -596,7 +681,7 @@ public class MainActivity extends Activity {
                     .addOnSuccessListener(t -> {
                         String txt = t.getText();
                         if (txt == null || txt.trim().isEmpty()) { toast("Kein Text im Foto erkannt"); return; }
-                        showTab(1);
+                        showTab(T_TEXT);
                         free.setText(txt.trim());
                         free.setSelection(free.getText().length());
                         OrderStore.log("Foto gelesen: " + (txt.length() > 40 ? txt.substring(0, 40).replace('\n', ' ') + "…" : txt));
