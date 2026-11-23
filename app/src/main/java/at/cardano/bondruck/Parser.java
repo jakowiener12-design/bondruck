@@ -73,7 +73,7 @@ final class Parser {
             "\\b((ich|wir) )?(hole|holen|hol|komme|kommen|komm)( es| das| sie| ihn| alles)?( dann| gleich| selbst)?( ab| vorbei)\\b"
                     + "|\\b(zum mitnehmen|zum abholen|zur abholung|bitte liefern|bitte bringen|nach hause)\\b"
                     + "|\\b(gelip alaca(ğ|g)ım|gelip alırım|gelip alirim|gelip alacam|alaca(ğ|g)ım|getirin|getirir misiniz|getirebilir misiniz|gönderin)\\b"
-                    + "|\\b(ich (hätte|möchte|will|bräuchte|nehme) gerne?|ich (hätte|möchte|will|bräuchte|nehme)|wir (hätten|möchten|nehmen)( gerne?)?|hätte gern(e)?|möchte gern(e)?|bestellen|bestellung|istiyorum|istiyoruz|sipariş|siparis)\\b", CI);
+                    + "|\\b(ich (hätte|hötte|hette|hatte|häte|möchte|möchten|mochte|möcht|will|bräuchte|brauche|nehme|krieg|kriege|bekomme) gerne?|ich (hätte|hötte|hette|hatte|häte|möchte|möchten|mochte|möcht|will|bräuchte|brauche|nehme|krieg|kriege|bekomme)|wir (hätten|möchten|nehmen)( gerne?)?|hätte gern(e)?|möchte gern(e)?|bestellen|bestellung|istiyorum|istiyoruz|sipariş|siparis)\\b", CI);
 
     private static final Set<String> ADDRESS_LEAD = new HashSet<>(Arrays.asList(
             "lieferung", "liefern", "adresse", "an", "nach", "bitte", "in", "die", "der", "zur", "zu",
@@ -187,7 +187,7 @@ final class Parser {
 
             }
 
-            for (String line : msg.split("\\n")) parseLine(line, r, repl);
+            for (String line : joinLines(msg, repl).split("\\n")) parseLine(line, r, repl);
         }
         if (r.address != null && r.type == null) r.type = "LIEFERUNG";
         return r;
@@ -248,6 +248,58 @@ final class Parser {
             out.add(noPrice);
         }
         return String.join("\n", out);
+    }
+
+    private static final Pattern ENDS_WITH_BASE = Pattern.compile(
+            "(?:^|\\s)(pizza|pizzen|familienpizza|familien pizza|familie|familien|family|mini|minipizza|mini pizza|pide|wunschpizza|dürüm|sandwich|bowl|teller|burger)[\\s,.:;-]*$", CI);
+    private static final Pattern STARTS_WITH_QTY = Pattern.compile("^\\s*(\\d{1,2}\\s*[x×]?|" + NUMWORDS + ")\\s", CI);
+
+    private static final Set<String> ANSWER_WORDS = new HashSet<>(Arrays.asList(
+            "salat", "sauce", "soße", "scharf", "mild", "zwiebel", "zwiebeln", "ja", "nein", "ok", "danke", "passt"));
+
+    /**
+     * Zeile ohne Menge unter einem Artikel: ergibt sie zusammen mit der Zeile davor ein bekanntes Produkt
+     * ("2 Dürüm" + "Rind"), wird sie angehängt. Ist sie selbst ein Produkt ("Cola"), wird sie "1x Cola".
+     * Sonst bleibt sie wie sie ist (Hinweis).
+     */
+    static String joinLines(String msg, Map<String, String> repl) {
+        String[] lines = msg.split("\n");
+        List<String> out = new ArrayList<>();
+        for (int i = 0; i < lines.length; i++) {
+            String l = lines[i];
+            String next = i + 1 < lines.length ? lines[i + 1].trim() : "";
+            boolean nextPlain = !next.isEmpty() && !STARTS_WITH_QTY.matcher(next).find() && next.length() <= 40
+                    && !next.matches(".*\\d.*") && !NOTE_START.matcher(next).lookingAt();
+            if (nextPlain && QTY.matcher(l).find()) {
+                Matcher m = QTY.matcher(l);
+                int last = -1;
+                while (m.find()) last = m.end();
+                String prod = last >= 0 ? l.substring(last).trim() : l.trim();
+                String a = exact(prod + " " + next, repl), b = exact(next + " " + prod, repl);
+                String alone = exact(prod, repl);
+                boolean generic = alone == null || ENDS_WITH_BASE.matcher(prod).find();
+                if (a != null && (generic || !a.equals(alone))) { out.add(l + " " + next); i++; continue; }
+                if (b != null && (generic || !b.equals(alone))) {
+                    out.add(l.substring(0, Math.max(0, last)) + next + " " + prod);
+                    i++;
+                    continue;
+                }
+            }
+            out.add(l);
+        }
+        boolean hasItems = false;
+        for (String l : out) if (QTY.matcher(l).find()) hasItems = true;
+        List<String> res = new ArrayList<>();
+        for (String l : out) {
+            String t = l.trim();
+            if (hasItems && !t.isEmpty() && !QTY.matcher(t).find() && !t.matches(".*\\d.*")
+                    && !ANSWER_WORDS.contains(norm(t)) && !NOTE_START.matcher(t).lookingAt() && exact(t, repl) != null) {
+                res.add("1x " + t);                       // allein stehendes Produkt ohne Menge
+            } else {
+                res.add(l);
+            }
+        }
+        return String.join("\n", res);
     }
 
     private static final List<String> pendingExtra = new ArrayList<>();
@@ -341,7 +393,7 @@ final class Parser {
         if (t.isEmpty()) return;
         boolean onlyFiller = true;
         for (String w : t.toLowerCase(Locale.GERMAN).split(" ")) {
-            if (!FILLER.contains(w) && !w.matches("lieferung|abholung|adresse|pizza|bestellung|bestellen|möchte|hätte|gerne|gern|ich|wir|bitte|für|mich|uns|istiyorum|sipariş|siparis|ver|verir|misin|misiniz|eve|adrese|adresime|adresim|adres|adresimiz|lütfen|lutfen|tane|wien|schwechat|simmering|mannswörth|mannswoerth|rannersdorf|kaiserebersdorf|kledering")) {
+            if (!FILLER.contains(w) && !w.matches("lieferung|abholung|adresse|pizza|bestellung|bestellen|möchte|hätte|hötte|hette|gerne|gern|ich|wir|bitte|für|mich|uns|istiyorum|sipariş|siparis|ver|verir|misin|misiniz|eve|adrese|adresime|adresim|adres|adresimiz|lütfen|lutfen|tane|wien|schwechat|simmering|mannswörth|mannswoerth|rannersdorf|kaiserebersdorf|kledering")) {
                 onlyFiller = false;
                 break;
             }
@@ -400,7 +452,22 @@ final class Parser {
         return r;
     }
 
-    private static String lookup(String p, Map<String, String> repl) {
+    private static String lookup(String p, Map<String, String> repl) { return lookup(p, repl, false); }
+
+    /** Offizieller Name nur bei sicherem Treffer (Speisekarte, Grundwort, Größe, Belag-Kombi), sonst null. */
+    static String exact(String text, Map<String, String> repl) {
+        String q = norm(text).replaceAll("^(\\d{1,2}\\s*x?|" + NUMWORDS + ")\\s+", "").trim();
+        if (q.isEmpty()) return null;
+        if (repl.containsKey(q)) return repl.get(q);
+        String size = SIZE_MINI.matcher(q).find() ? "mini" : SIZE_FAM.matcher(q).find() ? "fam" : null;
+        String q2 = SIZE_FAM.matcher(SIZE_MINI.matcher(q).replaceAll(" ")).replaceAll(" ").replaceAll("\\s+", " ").trim();
+        if (q2.isEmpty()) return null;
+        String r = size != null && repl.containsKey("pizza " + q2) ? repl.get("pizza " + q2) : lookup(q2, repl, true);
+        if (r == null) return null;
+        return size != null ? applySize(r, size) : r;
+    }
+
+    private static String lookup(String p, Map<String, String> repl, boolean strict) {
         if (repl.containsKey(p)) return repl.get(p);
         for (String base : BASES) {
             if (Pattern.compile("\\b" + base + "\\b").matcher(p).find()) {
@@ -408,7 +475,7 @@ final class Parser {
                         .replaceAll("\\s+", " ").trim();
                 if (repl.containsKey(base + " " + rest)) return repl.get(base + " " + rest);
                 if (base.equals("pizza") && repl.containsKey(rest)) return repl.get(rest);
-                if (rest.isEmpty()) return cap(base);
+                if (rest.isEmpty()) return strict ? null : cap(base);
             }
         }
         String noPizza = p.replaceAll("\\bpizz(?:a|en)\\b", " ").replaceAll("\\s+", " ").trim();
@@ -422,6 +489,7 @@ final class Parser {
             }
             if (all && tops.size() >= 2) return String.join(" + ", tops);
         }
+        if (strict) return null;
         String best = null;
         for (String k : repl.keySet()) {
             if (k.length() >= 3 && Pattern.compile("\\b" + Pattern.quote(k) + "\\b", CI).matcher(p).find()
