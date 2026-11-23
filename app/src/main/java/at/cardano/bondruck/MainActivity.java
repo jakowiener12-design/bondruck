@@ -42,7 +42,7 @@ public class MainActivity extends Activity {
 
     private EditText ip, port, wait, window, repl, ignore, free, labels, copies, header, streets, pfand, lHeight, lTop, search, lName, lPrice, lDesc;
     private final List<Integer> shown = new ArrayList<>();   // Index in labelList je Eintrag im Spinner
-    private Switch logoBon, logoLabel, headerBon, headerLabel, prices;
+    private Switch logoBon, logoLabel, headerBon, headerLabel, prices, autoNoAddr;
     private Switch auto;
     private RadioGroup size, labelStyle, enc;
     private Spinner labelPick;
@@ -318,9 +318,11 @@ public class MainActivity extends Activity {
 
         LinearLayout a = card(p, "Automatisch drucken");
         auto = new Switch(this);
-        auto.setText("Bon automatisch drucken, wenn Artikel und Adresse erkannt");
+        auto.setText("Bon automatisch drucken, sobald Artikel erkannt und der Kunde fertig geschrieben hat");
         auto.setChecked(Prefs.auto(this));
         a.addView(auto);
+        autoNoAddr = sw(a, "Auch ohne Adresse automatisch drucken (Bon zeigt dann \"Lieferung oder Abholung?\")",
+                Prefs.autoNoAddress(this));
         wait = input(a, "Wartezeit ohne neue Nachricht (Sekunden)",
                 sp.getString(Prefs.WAIT, Prefs.DEF_WAIT), InputType.TYPE_CLASS_NUMBER, false);
         window = input(a, "Zeitfenster: alles innerhalb von … Minuten ist eine Bestellung",
@@ -720,6 +722,7 @@ public class MainActivity extends Activity {
                 .putString(Prefs.PORT, port.getText().toString().trim())
                 .putInt(Prefs.SIZE, s >= 1 && s <= 3 ? s : 2)
                 .putBoolean(Prefs.AUTO, auto.isChecked())
+                .putBoolean(Prefs.AUTO_NOADDR, autoNoAddr.isChecked())
                 .putString(Prefs.WAIT, wait.getText().toString().trim())
                 .putString(Prefs.WINDOW, window.getText().toString().trim())
                 .putString(Prefs.ENC, enc.getCheckedRadioButtonId() >= 200

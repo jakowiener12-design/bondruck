@@ -135,7 +135,7 @@ public class WhatsAppListener extends NotificationListenerService {
             }
             Parser.Result res = Parser.parse(o.msgs, Parser.replacements(Prefs.repl(app)));
             boolean hasAddress = res.address != null || "ABHOLUNG".equals(res.type)
-                    || OrderStore.knownAddress(app, chat) != null;
+                    || OrderStore.knownAddress(app, chat) != null || Prefs.autoNoAddress(app);
             if (!res.items.isEmpty() && hasAddress) {
                 OrderStore.log(chat + ": wird automatisch gedruckt");
                 Printer.printOrder(app, chat, false);

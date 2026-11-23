@@ -24,6 +24,7 @@ final class Prefs {
     static final String LABEL_H = "labelHeight";
     static final String WINDOW = "window";
     static final String ENC = "encoding";
+    static final String AUTO_NOADDR = "autoNoAddr";
     static final String LABEL_TOP = "labelTop";
     private static boolean streetsLoaded;
     static final String LOGO_BON = "logoBon";
@@ -104,6 +105,7 @@ final class Prefs {
         reloadStreets(c, sp);
     }
 
+    static boolean autoNoAddress(Context c) { return get(c).getBoolean(AUTO_NOADDR, true); }
     static String encoding(Context c) { return get(c).getString(ENC, "utf8"); }
     static int windowMin(Context c) { return Math.max(5, num(get(c).getString(WINDOW, "30"), 30)); }
     static int labelHeight(Context c) { return num(get(c).getString(LABEL_H, "40"), 40); }
